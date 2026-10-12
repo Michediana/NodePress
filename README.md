@@ -38,7 +38,9 @@ Al primo avvio apri `http://localhost:5173/admin`: la procedura guidata su `/adm
 
 Il front è reso dal tema attivo. I temi vivono nel database: si creano e si modificano a runtime, senza ricompilare l'app. Ogni salvataggio di un file ricompila il tema in una **build bozza**. Pubblicando, la bozza diventa la versione visibile sul sito, e le build pubblicate restano nello storico per il rollback.
 
-I temi in `themes/` sono temi di partenza: al primo avvio quello attivo (`default`) viene installato nel DB. Le modifiche successive si fanno via API (e dalla fase 2.3 dal pannello).
+I temi in `themes/` sono temi di partenza: al primo avvio quello attivo (`default`) viene installato nel DB. Le modifiche successive si fanno dal pannello, in **Aspetto** (`/admin/appearance`), o via API.
+
+L'editor di Aspetto usa Monaco: albero dei file, schede, errori di compilazione sottolineati mentre si scrive, autocompletamento di tag, componenti, filtri, campi di `page`/`site` e token CSS, ⌘S per salvare. Accanto c'è l'anteprima della bozza nel vero front, in un iframe sandbox: di default senza script, con un interruttore per eseguire anche il JS del tema.
 
 ```
 theme.json          nome, template per tipo di nodo, default, token di design
@@ -58,7 +60,7 @@ I file `.np` usano una sintassi JSX "senza JavaScript": tag HTML (con `class` e 
 - **CSS:** `url("../assets/font.woff2")` viene riscritto con l'URL dell'asset; gli `@import` esterni sono ammessi.
 - **JS:** import relativi tra file del tema o da URL `https://`; per l'interattività si usano i custom element.
 
-Un admin può vedere la bozza di qualsiasi tema sul sito vero aprendo `/?np_preview=<tema>` (`?np_preview=off` per uscire).
+Un admin può vedere la bozza di qualsiasi tema sul sito vero aprendo `/?np_preview=<tema>` (`?np_preview=off` per uscire; l'anteprima scade comunque dopo 30 minuti).
 
 ## API REST
 

@@ -71,7 +71,7 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 - **Editor visuale** in stile Shopify: anteprima del vero front SSR in iframe, albero delle sezioni con drag & drop, inspector generato dallo schema, viewport desktop/tablet/mobile, bozza → pubblica.
 - **Sicurezza:**
   - solo gli admin (o la capability "Sviluppatore tema") modificano il codice del tema; gli editor modificano solo composizione e impostazioni;
-  - anteprima in iframe `sandbox="allow-scripts"` senza `allow-same-origin`;
+  - anteprima in iframe sandbox: di default senza script; il JS del tema gira solo se lo attiva l'utente (un iframe `allow-scripts` senza `allow-same-origin` avrebbe un'origine opaca, che rompe hydration, moduli e cookie di anteprima: l'isolamento vero arriva con l'origine separata della 2.6);
   - CSP con nonce sul front, cookie di sessione `HttpOnly` + `SameSite=Strict`, admin su origine separata consigliato in produzione.
 - Il CSS del front è separato da quello del pannello.
 
@@ -137,10 +137,10 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 
 **Completata quando:** si modifica un file del tema via API, la build bozza si aggiorna e pubblicandola il front cambia senza riavvio.
 
-#### 2.3 — Editor di codice
+#### 2.3 — Editor di codice ✅
 - Sezione "Aspetto" nel pannello: elenco dei temi, attivazione, duplicazione.
 - Editor Monaco con albero dei file, evidenziazione, autocompletamento di componenti/filtri/variabili, errori di compilazione in linea.
-- Anteprima live in iframe sandbox sulla build bozza.
+- Anteprima live in iframe sandbox sulla build bozza: di default senza script (`allow-same-origin`, solo HTML del server + CSS), con un interruttore per eseguire anche il JS del tema.
 
 **Completata quando:** un frontend dev crea un tema nuovo da zero dal pannello e lo pubblica.
 

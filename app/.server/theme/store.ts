@@ -156,6 +156,20 @@ function safePath(file: string) {
   }
 }
 
+export async function renameThemeFile(name: string, from: string, to: string, userId: number | null) {
+  const theme = await requireTheme(name);
+  const source = safePath(from);
+  const target = safePath(to);
+  if (source === "theme.json") throw new UserError("theme.json non può essere rinominato.");
+  if (await readFileContent(theme.id, target)) throw new UserError(`Esiste già un file "${target}".`, 409);
+  const [res] = await db
+    .update(themeFiles)
+    .set({ path: target })
+    .where(and(eq(themeFiles.themeId, theme.id), eq(themeFiles.path, source)));
+  if (!res.affectedRows) throw new UserError(`File "${source}" non trovato.`, 404);
+  return rebuild(theme, userId);
+}
+
 /** Pubblica la bozza, o una build precedente (rollback). */
 export async function publishTheme(name: string, buildId?: number) {
   const theme = await requireTheme(name);

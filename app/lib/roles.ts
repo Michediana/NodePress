@@ -10,7 +10,8 @@ export type Permission =
   | "languages"
   | "settings"
   | "users"
-  | "apikeys";
+  | "apikeys"
+  | "themes"; // temi: codice, attivazione, pubblicazione
 
 const permissions: Record<Role, Permission[]> = {
   admin: [
@@ -24,6 +25,7 @@ const permissions: Record<Role, Permission[]> = {
     "settings",
     "users",
     "apikeys",
+    "themes",
   ],
   editor: ["content.any", "content.own", "media", "media.upload"],
   author: ["content.own", "media.upload"],

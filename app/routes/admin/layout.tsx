@@ -5,6 +5,7 @@ import {
   LayoutDashboardIcon,
   LogOutIcon,
   MenuIcon,
+  PaletteIcon,
   SettingsIcon,
   SignpostIcon,
   UserIcon,
@@ -79,6 +80,7 @@ const contentNav: NavEntry[] = [
 ];
 
 const siteNav: NavEntry[] = [
+  { to: "/admin/appearance", label: "nav.appearance", icon: PaletteIcon, permission: "themes" },
   { to: "/admin/menus", label: "nav.menus", icon: MenuIcon, permission: "menus" },
   { to: "/admin/redirects", label: "nav.redirects", icon: SignpostIcon, permission: "redirects" },
   { to: "/admin/users", label: "nav.users", icon: UsersIcon, permission: "users" },

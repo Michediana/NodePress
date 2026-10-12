@@ -27,6 +27,11 @@ export default [
         route("redirects", "routes/admin/redirects.tsx"),
         ...prefix("users", [index("routes/admin/users/list.tsx"), route(":id", "routes/admin/users/edit.tsx")]),
         route("api-keys", "routes/admin/api-keys.tsx"),
+    ...prefix("appearance", [
+      index("routes/admin/appearance/list.tsx"),
+      route(":name", "routes/admin/appearance/editor.tsx"),
+      route(":name/api", "routes/admin/appearance/api.ts"),
+    ]),
         ...prefix("settings", [
           index("routes/admin/settings/general.tsx"),
           route("languages", "routes/admin/settings/languages.tsx"),

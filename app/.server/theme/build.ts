@@ -48,9 +48,7 @@ export const THEME_FILE_TYPES: Record<string, string> = {
   ".otf": "font/otf",
 };
 
-export const TEXT_EXTENSIONS = new Set([".np", ".json", ".css", ".js", ".ts", ".md", ".txt", ".svg"]);
-
-export const isTextFile = (file: string) => TEXT_EXTENSIONS.has(path.posix.extname(file).toLowerCase());
+export { isTextFile } from "~/lib/theme/files";
 
 /** Percorso di un file del tema normalizzato e sicuro (niente `..`, niente percorsi assoluti). */
 export function normalizeThemePath(input: string) {
@@ -306,4 +304,30 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
     },
     assets,
   };
+}
+
+/**
+ * Controlla un singolo file senza salvarlo né ricompilare il tema: per gli errori mentre si scrive.
+ * Non verifica i riferimenti ad altri file (componenti, asset), che la build completa controlla.
+ */
+export async function lintThemeFile(file: string, source: string): Promise<ThemeCompileError | null> {
+  try {
+    const ext = path.posix.extname(file).toLowerCase();
+    if (ext === ".np") compileMarkup(file, source);
+    else if (file === "theme.json") parseManifest(source);
+    else if (ext === ".css") compileCss(file, source, (url) => url);
+    else if (ext === ".js" || ext === ".ts") {
+      try {
+        await esbuild.transform(source, { loader: ext === ".ts" ? "ts" : "js", sourcefile: file, logLevel: "silent" });
+      } catch (error) {
+        const first = (error as esbuild.TransformFailure).errors?.[0];
+        if (!first) throw error;
+        throw new ThemeCompileError(first.text, file, first.location?.line ?? 1, (first.location?.column ?? 0) + 1);
+      }
+    }
+    return null;
+  } catch (error) {
+    if (error instanceof ThemeCompileError) return error;
+    throw error;
+  }
 }

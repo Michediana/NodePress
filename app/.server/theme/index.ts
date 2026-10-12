@@ -9,7 +9,9 @@ import { ensureActiveTheme, findTheme, getBuild } from "./store";
 
 export type FrontTheme = { name: string; buildId: number; data: ThemeBuildData; preview: boolean };
 
-const previewCookie = createCookie("np_preview", { path: "/", httpOnly: true, sameSite: "lax" });
+// A scadenza: se l'editor si chiude senza disattivarla, l'anteprima non resta attiva a lungo.
+// L'editor la rinnova a ogni ricarica.
+const previewCookie = createCookie("np_preview", { path: "/", httpOnly: true, sameSite: "lax", maxAge: 30 * 60 });
 
 const MAX_CACHED_BUILDS = 32;
 const buildCache = new Map<number, ThemeBuildData>();
