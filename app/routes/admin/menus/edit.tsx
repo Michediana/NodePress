@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, GripVerticalIcon, IndentIcon, OutdentIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
+import { ArrowLeftIcon, ExternalLinkIcon, GripVerticalIcon, LinkIcon, IndentIcon, OutdentIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { Form, Link, redirect, useNavigation, useSubmit } from "react-router";
 import { z } from "zod";
@@ -12,15 +12,17 @@ import { eq } from "drizzle-orm";
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast } from "~/admin/feedback";
+import { IconLabel } from "~/admin/components/icon-label";
+import { nodeIcon } from "~/admin/components/node-icon";
 import { t } from "~/admin/i18n";
+import { LanguageLabel } from "~/components/language-flag";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { Switch } from "~/components/ui/switch";
-import { languageName } from "~/lib/languages";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/edit";
 
@@ -37,10 +39,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     limit: 500,
   });
   const targets = [
-    ...pages.map((p) => ({ id: p.id, label: `${"  ".repeat(p.depth)}${p.label}`, langs: p.langs })),
+    ...pages.map((p) => ({ id: p.id, label: p.label, type: p.type, path: p.path, depth: p.depth, langs: p.langs })),
     ...items.map((i) => {
       const tr = i.translations.find((x) => x.lang === langs.defaultLang) ?? i.translations[0];
-      return { id: i.id, label: tr ? `${tr.title} (${tr.path})` : `#${i.id}`, langs: i.translations.map((x) => x.lang) };
+      return { id: i.id, label: tr ? `${tr.title} (${tr.path})` : `#${i.id}`, type: i.type, path: tr?.path, depth: 0, langs: i.translations.map((x) => x.lang) };
     }),
   ];
   return { ...result, langs, targets };
@@ -92,6 +94,15 @@ const newKey = () => `new-${++keySeq}`;
 export default function EditMenu({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
   const { menu, langs, targets } = loaderData;
+  const kinds = [
+    { value: "node", label: <IconLabel icon={LinkIcon}>{t("menus.internal")}</IconLabel> },
+    { value: "url", label: <IconLabel icon={ExternalLinkIcon}>{t("menus.external")}</IconLabel> },
+  ];
+  const targetItems = targets.map((target) => ({
+    value: target.id,
+    depth: target.depth,
+    label: <IconLabel icon={nodeIcon(target.type, target.path)}>{target.label}</IconLabel>,
+  }));
   const navigation = useNavigation();
   const submit = useSubmit();
   const [items, setItems] = useState<EditorItem[]>(() =>
@@ -197,23 +208,43 @@ export default function EditMenu({ loaderData, actionData }: Route.ComponentProp
               <GripVerticalIcon className="mt-2 size-4 shrink-0 cursor-grab text-muted-foreground" />
               <div className="flex min-w-0 flex-1 flex-col gap-3">
                 <div className="grid gap-3 md:grid-cols-[10rem_1fr]">
-                  <NativeSelect value={item.kind} onChange={(e) => update(item.key, { kind: e.target.value as EditorItem["kind"] })} className="w-full">
-                    <NativeSelectOption value="node">{t("menus.internal")}</NativeSelectOption>
-                    <NativeSelectOption value="url">{t("menus.external")}</NativeSelectOption>
-                  </NativeSelect>
+                  <Select
+                    value={item.kind}
+                    onValueChange={(kind) => kind && update(item.key, { kind: kind as EditorItem["kind"] })}
+                    items={kinds}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {kinds.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                   {item.kind === "node" ? (
-                    <NativeSelect
-                      value={String(item.nodeId ?? "")}
-                      onChange={(e) => update(item.key, { nodeId: Number(e.target.value) || null })}
-                      className="w-full"
+                    <Select
+                      value={item.nodeId ?? null}
+                      onValueChange={(nodeId) => update(item.key, { nodeId })}
+                      items={targetItems}
                     >
-                      <NativeSelectOption value="">{t("menus.chooseContent")}</NativeSelectOption>
-                      {targets.map((target) => (
-                        <NativeSelectOption key={target.id} value={target.id}>
-                          {target.label}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                      <SelectTrigger className="w-full min-w-0">
+                        <SelectValue placeholder={t("menus.chooseContent")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {targetItems.map((o) => (
+                            <SelectItem key={o.value} value={o.value} style={{ paddingLeft: `${0.375 + o.depth * 0.75}rem` }}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <Input placeholder="https://" value={item.url} onChange={(e) => update(item.key, { url: e.target.value })} />
                   )}
@@ -221,7 +252,9 @@ export default function EditMenu({ loaderData, actionData }: Route.ComponentProp
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {langs.codes.map((code) => (
                     <Field key={code}>
-                      <FieldLabel className="text-xs">{languageName(code)}</FieldLabel>
+                      <FieldLabel className="text-xs">
+                        <LanguageLabel code={code} />
+                      </FieldLabel>
                       <Input
                         placeholder={item.kind === "node" ? t("menus.labelFromTitle") : t("menus.labelRequired")}
                         value={item.labels[code] ?? ""}

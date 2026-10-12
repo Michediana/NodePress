@@ -7,12 +7,12 @@ import { getSiteLanguages } from "~/.server/languages";
 import { PageHeader } from "~/admin/components/page-header";
 import { StatusBadge } from "~/admin/components/status-badge";
 import { t } from "~/admin/i18n";
+import { LanguageLabel } from "~/components/language-flag";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { languageName } from "~/lib/languages";
 import { effectiveStatus } from "~/lib/status";
 import type { Route } from "./+types/dashboard";
 
@@ -53,7 +53,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
             {t("dashboard.languages")}
             {langs.codes.map((code) => (
               <Badge key={code} variant={code === langs.defaultLang ? "default" : "secondary"}>
-                {languageName(code)}
+                <LanguageLabel code={code} />
               </Badge>
             ))}
           </span>

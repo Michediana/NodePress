@@ -4,7 +4,7 @@ import { Textarea } from "~/components/ui/textarea";
 
 type Common = {
   name: string;
-  label: string;
+  label: React.ReactNode;
   description?: React.ReactNode;
   error?: string;
 };

@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { LanguageFlag } from "~/components/language-flag";
 import { Badge } from "~/components/ui/badge";
 import { effectiveStatus, type ContentStatus } from "~/lib/status";
 
@@ -24,6 +25,7 @@ export function TranslationBadges({
             className={status ? undefined : "border-dashed text-muted-foreground"}
             render={<Link to={`/admin/content/${nodeId}?lang=${lang}`} />}
           >
+            <LanguageFlag code={lang} className="h-2.5 w-[15px]" />
             {lang}
           </Badge>
         );

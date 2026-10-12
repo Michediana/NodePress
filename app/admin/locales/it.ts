@@ -219,7 +219,7 @@ export const it = {
     typeCollectionHelp: "Contiene elementi (es. notizie) mostrati in un elenco paginato.",
     parent: "Genitore",
     parentHelp: "Spostando il contenuto, gli URL cambiano e vengono creati i redirect 301.",
-    root: "— Radice —",
+    root: "Radice",
     template: "Template",
     listTemplate: "Template elenco",
     itemTemplate: "Template elementi",

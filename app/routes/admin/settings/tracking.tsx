@@ -9,9 +9,9 @@ import { SettingsCard } from "~/admin/components/settings-form";
 import { SettingsNav } from "~/admin/components/settings-nav";
 import { useActionToast } from "~/admin/feedback";
 import { t } from "~/admin/i18n";
+import { LanguageLabel } from "~/components/language-flag";
 import { FieldSeparator } from "~/components/ui/field";
 import { consentTextsFor } from "~/lib/consent";
-import { languageName } from "~/lib/languages";
 import type { Route } from "./+types/tracking";
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -65,7 +65,9 @@ export default function TrackingSettings({ loaderData, actionData }: Route.Compo
         <SettingsCard title={t("tracking.banner")} description={t("tracking.bannerHelp")} intent="texts">
           {loaderData.langs.map(({ code, custom, defaults }) => (
             <div key={code} className="flex flex-col gap-4">
-              <FieldSeparator>{languageName(code)}</FieldSeparator>
+              <FieldSeparator>
+                <LanguageLabel code={code} />
+              </FieldSeparator>
               <TextField name={`${code}.title`} label={t("tracking.bannerTitle")} placeholder={defaults.title} defaultValue={custom?.title ?? ""} />
               <TextareaField name={`${code}.text`} label={t("tracking.bannerText")} placeholder={defaults.text} defaultValue={custom?.text ?? ""} rows={3} />
               <div className="grid grid-cols-2 gap-4">

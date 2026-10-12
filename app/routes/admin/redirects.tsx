@@ -1,4 +1,4 @@
-import { PlusIcon, TrashIcon } from "lucide-react";
+import { MoveRightIcon, PlusIcon, TimerIcon, TrashIcon } from "lucide-react";
 import { Form, useSubmit } from "react-router";
 import { z } from "zod";
 import { requirePermission } from "~/.server/auth";
@@ -8,13 +8,14 @@ import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { pageParam, Pager } from "~/admin/components/pager";
 import { useActionToast } from "~/admin/feedback";
+import { IconLabel } from "~/admin/components/icon-label";
 import { t } from "~/admin/i18n";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Route } from "./+types/redirects";
 
@@ -49,6 +50,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   });
 }
 
+// 301/308 permanenti, 302/307 temporanei
+const statusCodes = ["301", "302", "307", "308"].map((code) => ({
+  value: code,
+  label: <IconLabel icon={code === "301" || code === "308" ? MoveRightIcon : TimerIcon}>{code}</IconLabel>,
+}));
+
 export default function Redirects({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
   const submit = useSubmit();
@@ -66,12 +73,20 @@ export default function Redirects({ loaderData, actionData }: Route.ComponentPro
               <TextField name="toPath" label={t("redirects.to")} placeholder="/nuova-pagina" required />
               <Field>
                 <FieldLabel htmlFor="statusCode">{t("redirects.code")}</FieldLabel>
-                <NativeSelect id="statusCode" name="statusCode" defaultValue="301" className="w-full">
-                  <NativeSelectOption value="301">301</NativeSelectOption>
-                  <NativeSelectOption value="302">302</NativeSelectOption>
-                  <NativeSelectOption value="307">307</NativeSelectOption>
-                  <NativeSelectOption value="308">308</NativeSelectOption>
-                </NativeSelect>
+                <Select name="statusCode" defaultValue="301" items={statusCodes}>
+                  <SelectTrigger id="statusCode" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {statusCodes.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </Field>
               <Button type="submit" name="intent" value="create">
                 <PlusIcon data-icon="inline-start" />

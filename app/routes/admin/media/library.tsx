@@ -1,4 +1,4 @@
-import { UploadIcon } from "lucide-react";
+import { FileTextIcon, FilmIcon, ImageIcon, LayoutGridIcon, UploadIcon } from "lucide-react";
 import { useRef } from "react";
 import { Form, Link, useNavigation, useSubmit } from "react-router";
 import { requirePermission } from "~/.server/auth";
@@ -8,11 +8,12 @@ import { MediaThumb } from "~/admin/components/media-thumb";
 import { PageHeader } from "~/admin/components/page-header";
 import { pageParam, Pager } from "~/admin/components/pager";
 import { useActionToast } from "~/admin/feedback";
+import { IconLabel } from "~/admin/components/icon-label";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "~/components/ui/empty";
 import { Input } from "~/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { formatBytes } from "~/lib/media";
 import type { Route } from "./+types/library";
@@ -46,6 +47,12 @@ export default function MediaLibrary({ loaderData, actionData }: Route.Component
   const submit = useSubmit();
   const formRef = useRef<HTMLFormElement>(null);
   const uploading = navigation.state === "submitting" && navigation.formMethod === "POST";
+  const mediaTypes = [
+    { value: "", label: <IconLabel icon={LayoutGridIcon}>{t("media.allTypes")}</IconLabel> },
+    { value: "image", label: <IconLabel icon={ImageIcon}>{t("media.images")}</IconLabel> },
+    { value: "video", label: <IconLabel icon={FilmIcon}>{t("media.videos")}</IconLabel> },
+    { value: "document", label: <IconLabel icon={FileTextIcon}>{t("media.documents")}</IconLabel> },
+  ];
   return (
     <>
       <PageHeader
@@ -71,12 +78,20 @@ export default function MediaLibrary({ loaderData, actionData }: Route.Component
       />
       <Form method="get" className="flex flex-wrap gap-2">
         <Input name="q" placeholder={t("common.search")} defaultValue={loaderData.q} className="max-w-xs" />
-        <NativeSelect name="type" defaultValue={loaderData.type}>
-          <NativeSelectOption value="">{t("media.allTypes")}</NativeSelectOption>
-          <NativeSelectOption value="image">{t("media.images")}</NativeSelectOption>
-          <NativeSelectOption value="video">{t("media.videos")}</NativeSelectOption>
-          <NativeSelectOption value="document">{t("media.documents")}</NativeSelectOption>
-        </NativeSelect>
+        <Select name="type" defaultValue={loaderData.type} items={mediaTypes}>
+          <SelectTrigger className="min-w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {mediaTypes.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <Button type="submit" variant="outline">
           {t("common.filter")}
         </Button>

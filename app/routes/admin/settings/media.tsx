@@ -9,7 +9,7 @@ import { SettingsNav } from "~/admin/components/settings-nav";
 import { useActionToast } from "~/admin/feedback";
 import { t } from "~/admin/i18n";
 import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import type { Route } from "./+types/media";
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -42,10 +42,17 @@ export default function MediaSettings({ loaderData, actionData }: Route.Componen
         <SettingsCard title={t("settings.media")} description={t("mediaSettings.description")}>
           <Field>
             <FieldLabel htmlFor="mediaFormat">{t("mediaSettings.format")}</FieldLabel>
-            <NativeSelect id="mediaFormat" name="mediaFormat" defaultValue={loaderData.mediaFormat}>
-              <NativeSelectOption value="webp">WEBP</NativeSelectOption>
-              <NativeSelectOption value="avif">AVIF</NativeSelectOption>
-            </NativeSelect>
+            <Select name="mediaFormat" defaultValue={loaderData.mediaFormat} items={{ webp: "WEBP", avif: "AVIF" }}>
+              <SelectTrigger id="mediaFormat">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="webp">WEBP</SelectItem>
+                  <SelectItem value="avif">AVIF</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <FieldDescription>{t("mediaSettings.formatHelp")}</FieldDescription>
           </Field>
           <TextField name="mediaQuality" type="number" min={1} max={100} label={t("mediaSettings.quality")} defaultValue={loaderData.mediaQuality} error={errors.mediaQuality} />

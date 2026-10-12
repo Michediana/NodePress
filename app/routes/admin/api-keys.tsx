@@ -1,4 +1,4 @@
-import { CopyIcon, KeyRoundIcon, TrashIcon } from "lucide-react";
+import { CopyIcon, EyeIcon, KeyRoundIcon, ShieldIcon, TrashIcon } from "lucide-react";
 import { Form, useSubmit } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { formToObject, handleUserErrors, parse, UserError } from "~/.server/form
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast } from "~/admin/feedback";
+import { IconLabel } from "~/admin/components/icon-label";
 import { t } from "~/admin/i18n";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
@@ -15,7 +16,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "~/components/ui/input-group";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Route } from "./+types/api-keys";
 
@@ -41,6 +42,11 @@ export async function action({ request, context }: Route.ActionArgs) {
     throw new UserError("Azione non valida.");
   });
 }
+
+const scopes = [
+  { value: "read", label: <IconLabel icon={EyeIcon}>read</IconLabel> },
+  { value: "admin", label: <IconLabel icon={ShieldIcon}>admin</IconLabel> },
+];
 
 export default function ApiKeys({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
@@ -128,10 +134,20 @@ export default function ApiKeys({ loaderData, actionData }: Route.ComponentProps
                 <TextField name="name" label={t("apiKeys.name")} required />
                 <Field>
                   <FieldLabel htmlFor="scope">{t("apiKeys.scope")}</FieldLabel>
-                  <NativeSelect id="scope" name="scope" defaultValue="read" className="w-full">
-                    <NativeSelectOption value="read">read</NativeSelectOption>
-                    <NativeSelectOption value="admin">admin</NativeSelectOption>
-                  </NativeSelect>
+                  <Select name="scope" defaultValue="read" items={scopes}>
+                    <SelectTrigger id="scope" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {scopes.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                   <FieldDescription>{t("apiKeys.scopeHelp")}</FieldDescription>
                 </Field>
                 <Button type="submit" name="intent" value="create">

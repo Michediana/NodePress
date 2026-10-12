@@ -9,9 +9,9 @@ import { PageHeader } from "~/admin/components/page-header";
 import { SettingsCard } from "~/admin/components/settings-form";
 import { useActionToast } from "~/admin/feedback";
 import { t } from "~/admin/i18n";
+import { LanguageLabel } from "~/components/language-flag";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { languageName } from "~/lib/languages";
 import { formatBytes, isImage, mediaUrl } from "~/lib/media";
 import { can } from "~/lib/roles";
 import type { Route } from "./+types/detail";
@@ -126,7 +126,7 @@ export default function MediaDetail({ loaderData, actionData }: Route.ComponentP
           {isImage(media.mime) || media.mime === "image/svg+xml" ? (
             <SettingsCard title={t("media.alt")} description={t("media.altHelp")}>
               {langs.map((code) => (
-                <TextField key={code} name={`alt.${code}`} label={languageName(code)} defaultValue={media.alt[code] ?? ""} />
+                <TextField key={code} name={`alt.${code}`} label={<LanguageLabel code={code} />} defaultValue={media.alt[code] ?? ""} />
               ))}
             </SettingsCard>
           ) : null}

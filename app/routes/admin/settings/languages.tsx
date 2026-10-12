@@ -8,6 +8,7 @@ import { PageHeader } from "~/admin/components/page-header";
 import { SettingsNav } from "~/admin/components/settings-nav";
 import { useActionToast } from "~/admin/feedback";
 import { t } from "~/admin/i18n";
+import { LanguageLabel } from "~/components/language-flag";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -79,7 +80,7 @@ export default function LanguagesSettings({ loaderData, actionData }: Route.Comp
                   <TableRow key={lang.code}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{languageName(lang.code)}</span>
+                        <LanguageLabel code={lang.code} className="font-medium" />
                         <span className="text-muted-foreground">{nativeLanguageName(lang.code)}</span>
                         {lang.isDefault && <Badge>{t("languages.default")}</Badge>}
                       </div>

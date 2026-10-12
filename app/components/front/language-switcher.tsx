@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { LanguageFlag } from "~/components/language-flag";
 import { nativeLanguageName } from "~/lib/languages";
 import { cn } from "~/lib/utils";
 import { usePage, useSite } from "./site";
@@ -25,10 +26,11 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           aria-current={link.lang === site.lang ? "true" : undefined}
           title={nativeLanguageName(link.lang)}
           className={cn(
-            "rounded-md px-2 py-1 uppercase transition-colors hover:bg-muted",
+            "inline-flex items-center gap-1.5 rounded-md px-2 py-1 uppercase transition-colors hover:bg-muted",
             link.lang === site.lang ? "font-semibold text-foreground" : "text-muted-foreground",
           )}
         >
+          <LanguageFlag code={link.lang} />
           {link.lang}
         </Link>
       ))}

@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, TrashIcon } from "lucide-react";
+import { ArrowLeftIcon, ShieldIcon, TrashIcon, UserIcon, UserPenIcon } from "lucide-react";
 import { Form, Link, redirect, useNavigation, useSubmit } from "react-router";
 import { requirePermission } from "~/.server/auth";
 import { formToObject, handleUserErrors, parse } from "~/.server/forms";
@@ -6,11 +6,12 @@ import { createUser, deleteUser, getUserById, updateUser, userInputSchema } from
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast, type ActionResult } from "~/admin/feedback";
+import { IconLabel } from "~/admin/components/icon-label";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { roles } from "~/lib/roles";
 import type { Route } from "./+types/edit";
@@ -45,6 +46,8 @@ export default function EditUser({ loaderData, actionData: rawActionData }: Rout
   const actionData = rawActionData as ActionResult | undefined;
   useActionToast(actionData);
   const { user, isSelf } = loaderData;
+  const roleIcons = { admin: ShieldIcon, editor: UserPenIcon, author: UserIcon };
+  const roleItems = roles.map((role) => ({ value: role, label: <IconLabel icon={roleIcons[role]}>{t(`roles.${role}`)}</IconLabel> }));
   const navigation = useNavigation();
   const submit = useSubmit();
   const errors = actionData?.fieldErrors ?? {};
@@ -75,13 +78,20 @@ export default function EditUser({ loaderData, actionData: rawActionData }: Rout
               <TextField name="email" type="email" label={t("users.email")} defaultValue={user?.email} required error={errors.email} />
               <Field>
                 <FieldLabel htmlFor="role">{t("users.role")}</FieldLabel>
-                <NativeSelect id="role" name="role" defaultValue={user?.role ?? "author"} className="w-full">
-                  {roles.map((role) => (
-                    <NativeSelectOption key={role} value={role}>
-                      {t(`roles.${role}`)}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                <Select name="role" defaultValue={user?.role ?? "author"} items={roleItems}>
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {roleItems.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
                 <FieldDescription>{t("users.roleHelp")}</FieldDescription>
               </Field>
               <TextField

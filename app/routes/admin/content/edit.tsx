@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { ExternalLinkIcon, ListIcon, SaveIcon, TrashIcon } from "lucide-react";
+import { CircleCheckIcon, ClockIcon, ExternalLinkIcon, ListIcon, ListTreeIcon, PencilLineIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { Form, Link, redirect, useNavigation, useSubmit } from "react-router";
 import { z } from "zod";
@@ -15,13 +15,16 @@ import { StatusBadge } from "~/admin/components/status-badge";
 import { BlockEditor } from "~/admin/editor/block-editor";
 import { SeoPanel, type SeoState } from "~/admin/editor/seo-panel";
 import { useActionToast, type ActionResult } from "~/admin/feedback";
+import { IconLabel } from "~/admin/components/icon-label";
+import { nodeIcon } from "~/admin/components/node-icon";
 import { t } from "~/admin/i18n";
+import { LanguageLabel } from "~/components/language-flag";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { walkDoc, type ContentDoc } from "~/lib/content";
@@ -173,6 +176,15 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
   const actionData = rawActionData as ActionResult | undefined;
   useActionToast(actionData);
   const { node, translation, lang, langs, parentPath, parentMissing, parentOptions, media, collection } = loaderData;
+  const parentItems = [
+    { value: "", depth: 0, label: <IconLabel icon={ListTreeIcon}>{t("content.root")}</IconLabel> },
+    ...parentOptions.map((o) => ({ value: String(o.id), depth: o.depth, label: <IconLabel icon={nodeIcon(o.type, o.path)}>{o.label}</IconLabel> })),
+  ];
+  const statuses = [
+    { value: "draft", label: <IconLabel icon={PencilLineIcon}>{t("status.draft")}</IconLabel> },
+    { value: "published", label: <IconLabel icon={CircleCheckIcon}>{t("status.published")}</IconLabel> },
+    { value: "scheduled", label: <IconLabel icon={ClockIcon}>{t("status.scheduled")}</IconLabel> },
+  ];
   const navigation = useNavigation();
   const submit = useSubmit();
   const errors = actionData?.fieldErrors ?? {};
@@ -253,7 +265,7 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
             const exists = node.translations.some((x) => x.lang === code);
             return (
               <TabsTrigger key={code} value={code} render={<Link to={`?lang=${code}`} replace />} nativeButton={false}>
-                <span className={exists ? undefined : "text-muted-foreground line-through decoration-dashed"}>{languageName(code)}</span>
+                <LanguageLabel code={code} className={exists ? undefined : "text-muted-foreground line-through decoration-dashed"} />
               </TabsTrigger>
             );
           })}
@@ -315,11 +327,25 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="status">{t("content.status")}</FieldLabel>
-                  <NativeSelect id="status" name="status" value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className="w-full">
-                    <NativeSelectOption value="draft">{t("status.draft")}</NativeSelectOption>
-                    <NativeSelectOption value="published">{t("status.published")}</NativeSelectOption>
-                    <NativeSelectOption value="scheduled">{t("status.scheduled")}</NativeSelectOption>
-                  </NativeSelect>
+                  <Select
+                    name="status"
+                    value={status}
+                    onValueChange={(value) => value && setStatus(value as typeof status)}
+                    items={statuses}
+                  >
+                    <SelectTrigger id="status" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {statuses.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="publishedLocal">{t("content.publishedAt")}</FieldLabel>
@@ -340,38 +366,70 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
                 <FieldGroup>
                   <Field>
                     <FieldLabel htmlFor="parentId">{t("content.parent")}</FieldLabel>
-                    <NativeSelect id="parentId" name="parentId" value={parentId} onChange={(e) => setParentId(e.target.value)} className="w-full">
-                      <NativeSelectOption value="">{t("content.root")}</NativeSelectOption>
-                      {parentOptions.map((o) => (
-                        <NativeSelectOption key={o.id} value={o.id}>
-                          {"  ".repeat(o.depth)}
-                          {o.label}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                    <Select
+                      name="parentId"
+                      value={parentId}
+                      onValueChange={(value) => setParentId(value ?? "")}
+                      items={parentItems}
+                    >
+                      <SelectTrigger id="parentId" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {parentItems.map((o) => (
+                            <SelectItem key={o.value} value={o.value} style={{ paddingLeft: `${0.375 + o.depth * 0.75}rem` }}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                     <FieldDescription>{t("content.parentHelp")}</FieldDescription>
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="template">{node.type === "collection" ? t("content.listTemplate") : t("content.template")}</FieldLabel>
-                    <NativeSelect id="template" name="template" defaultValue={node.template} className="w-full">
-                      {templateKinds(node.type === "collection" ? "listing" : "page").map((tpl) => (
-                        <NativeSelectOption key={tpl.name} value={tpl.name}>
-                          {tpl.label}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                    <Select
+                      name="template"
+                      defaultValue={node.template}
+                      items={templateKinds(node.type === "collection" ? "listing" : "page").map((tpl) => ({ value: tpl.name, label: tpl.label }))}
+                    >
+                      <SelectTrigger id="template" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {templateKinds(node.type === "collection" ? "listing" : "page").map((tpl) => (
+                            <SelectItem key={tpl.name} value={tpl.name}>
+                              {tpl.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </Field>
                   {node.type === "collection" && (
                     <>
                       <Field>
                         <FieldLabel htmlFor="itemTemplate">{t("content.itemTemplate")}</FieldLabel>
-                        <NativeSelect id="itemTemplate" name="itemTemplate" defaultValue={node.itemTemplate ?? defaultTemplate.item} className="w-full">
-                          {templateKinds("item").map((tpl) => (
-                            <NativeSelectOption key={tpl.name} value={tpl.name}>
-                              {tpl.label}
-                            </NativeSelectOption>
-                          ))}
-                        </NativeSelect>
+                        <Select
+                          name="itemTemplate"
+                          defaultValue={node.itemTemplate ?? defaultTemplate.item}
+                          items={templateKinds("item").map((tpl) => ({ value: tpl.name, label: tpl.label }))}
+                        >
+                          <SelectTrigger id="itemTemplate" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {templateKinds("item").map((tpl) => (
+                                <SelectItem key={tpl.name} value={tpl.name}>
+                                  {tpl.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       </Field>
                       <TextField name="perPage" type="number" min={1} max={100} defaultValue={node.perPage} label={t("content.perPage")} />
                     </>

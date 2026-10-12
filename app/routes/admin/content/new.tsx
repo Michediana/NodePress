@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { ListTreeIcon } from "lucide-react";
 import { Form, redirect, useNavigation, useSearchParams } from "react-router";
 import { useState } from "react";
 import { z } from "zod";
@@ -10,12 +11,14 @@ import { createNode, deleteNode, getTreeOptions, saveTranslation } from "~/.serv
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { SlugInput, useAutoSlug } from "~/admin/components/slug-input";
+import { IconLabel } from "~/admin/components/icon-label";
+import { nodeIcon } from "~/admin/components/node-icon";
 import { t } from "~/admin/i18n";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { languageName, langPrefix } from "~/lib/languages";
@@ -80,6 +83,10 @@ export default function NewContent({ loaderData, actionData }: Route.ComponentPr
   const [parentId, setParentId] = useState(String(loaderData.parentId ?? ""));
   const slug = useAutoSlug("", "", true);
   const { langs, options, collection } = loaderData;
+  const parentItems = [
+    { value: "", depth: 0, label: <IconLabel icon={ListTreeIcon}>{t("content.root")}</IconLabel> },
+    ...options.map((o) => ({ value: String(o.id), depth: o.depth, label: <IconLabel icon={nodeIcon(o.type, o.path)}>{o.label}</IconLabel> })),
+  ];
   const errors = actionData?.fieldErrors ?? {};
 
   const parentPath =
@@ -124,37 +131,69 @@ export default function NewContent({ loaderData, actionData }: Route.ComponentPr
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="parentId">{t("content.parent")}</FieldLabel>
-                    <NativeSelect id="parentId" name="parentId" value={parentId} onChange={(e) => setParentId(e.target.value)} className="w-full">
-                      <NativeSelectOption value="">{t("content.root")}</NativeSelectOption>
-                      {options.map((o) => (
-                        <NativeSelectOption key={o.id} value={o.id}>
-                          {"  ".repeat(o.depth)}
-                          {o.label}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                    <Select
+                      name="parentId"
+                      value={parentId}
+                      onValueChange={(value) => setParentId(value ?? "")}
+                      items={parentItems}
+                    >
+                      <SelectTrigger id="parentId" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {parentItems.map((o) => (
+                            <SelectItem key={o.value} value={o.value} style={{ paddingLeft: `${0.375 + o.depth * 0.75}rem` }}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="template">{type === "collection" ? t("content.listTemplate") : t("content.template")}</FieldLabel>
-                    <NativeSelect id="template" name="template" key={type} className="w-full">
-                      {templateKinds(type === "collection" ? "listing" : "page").map((tpl) => (
-                        <NativeSelectOption key={tpl.name} value={tpl.name}>
-                          {tpl.label}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
+                    <Select
+                      name="template" key={type}
+                      defaultValue={templateKinds(type === "collection" ? "listing" : "page")[0]?.name}
+                      items={templateKinds(type === "collection" ? "listing" : "page").map((tpl) => ({ value: tpl.name, label: tpl.label }))}
+                    >
+                      <SelectTrigger id="template" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {templateKinds(type === "collection" ? "listing" : "page").map((tpl) => (
+                            <SelectItem key={tpl.name} value={tpl.name}>
+                              {tpl.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </Field>
                   {type === "collection" && (
                     <>
                       <Field>
                         <FieldLabel htmlFor="itemTemplate">{t("content.itemTemplate")}</FieldLabel>
-                        <NativeSelect id="itemTemplate" name="itemTemplate" defaultValue={defaultTemplate.item} className="w-full">
-                          {templateKinds("item").map((tpl) => (
-                            <NativeSelectOption key={tpl.name} value={tpl.name}>
-                              {tpl.label}
-                            </NativeSelectOption>
-                          ))}
-                        </NativeSelect>
+                        <Select
+                          name="itemTemplate"
+                          defaultValue={defaultTemplate.item}
+                          items={templateKinds("item").map((tpl) => ({ value: tpl.name, label: tpl.label }))}
+                        >
+                          <SelectTrigger id="itemTemplate" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {templateKinds("item").map((tpl) => (
+                                <SelectItem key={tpl.name} value={tpl.name}>
+                                  {tpl.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       </Field>
                       <TextField name="perPage" type="number" min={1} max={100} defaultValue={10} label={t("content.perPage")} />
                     </>

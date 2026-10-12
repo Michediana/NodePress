@@ -86,13 +86,14 @@ export async function getTree(): Promise<TreeNode[]> {
 /** Elenco piatto di pagine e raccoglitori con indentazione, per le select. */
 export async function getTreeOptions(lang: string) {
   const tree = await getTree();
-  const options: { id: number; label: string; depth: number; type: NodeType; langs: string[] }[] = [];
+  const options: { id: number; label: string; path?: string; depth: number; type: NodeType; langs: string[] }[] = [];
   const visit = (list: TreeNode[], depth: number) => {
     for (const node of list) {
       const t = node.translations.find((x) => x.lang === lang) ?? node.translations[0];
       options.push({
         id: node.id,
         label: t ? `${t.title} (${t.path})` : `#${node.id}`,
+        path: t?.path,
         depth,
         type: node.type,
         langs: node.translations.map((x) => x.lang),

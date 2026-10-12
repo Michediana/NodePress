@@ -1,4 +1,5 @@
-import { NativeSelect, NativeSelectOption } from "~/components/ui/native-select";
+import { LanguageFlag } from "~/components/language-flag";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 
 export type LanguageOption = { code: string; name: string };
 
@@ -9,17 +10,37 @@ export type LanguageOption = { code: string; name: string };
 export function LanguageSelect({
   options,
   exclude = [],
+  id,
+  className,
+  defaultValue,
   ...props
-}: React.ComponentProps<typeof NativeSelect> & { options: LanguageOption[]; exclude?: string[] }) {
+}: React.ComponentProps<typeof Select<string>> & { options: LanguageOption[]; exclude?: string[]; className?: string }) {
+  const items = options
+    .filter((o) => !exclude.includes(o.code))
+    .map((o) => ({
+      value: o.code,
+      label: (
+        <>
+          <LanguageFlag code={o.code} />
+          {o.name} ({o.code})
+        </>
+      ),
+    }));
   return (
-    <NativeSelect {...props}>
-      {options
-        .filter((o) => !exclude.includes(o.code))
-        .map((o) => (
-          <NativeSelectOption key={o.code} value={o.code}>
-            {o.name} ({o.code})
-          </NativeSelectOption>
-        ))}
-    </NativeSelect>
+    // come una select nativa: senza valore esplicito si parte dalla prima opzione
+    <Select items={items} defaultValue={defaultValue ?? items[0]?.value} {...props}>
+      <SelectTrigger id={id} className={className}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {items.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 }

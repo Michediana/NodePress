@@ -1,9 +1,10 @@
-import { ArrowDownIcon, ArrowUpIcon, FileIcon, FilePlusIcon, FolderIcon, HomeIcon, ListIcon, MoreHorizontalIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, FilePlusIcon, FolderIcon, ListIcon, MoreHorizontalIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { Link, useSubmit } from "react-router";
 import { getUser } from "~/.server/auth";
 import { handleUserErrors, UserError } from "~/.server/forms";
 import { getSiteLanguages } from "~/.server/languages";
 import { canEditNode, deleteNode, getNodeForUser, getTree, moveNode, type TreeNode } from "~/.server/nodes";
+import { nodeIcon } from "~/admin/components/node-icon";
 import { PageHeader } from "~/admin/components/page-header";
 import { TranslationBadges } from "~/admin/components/translation-badges";
 import { useActionToast } from "~/admin/feedback";
@@ -56,7 +57,7 @@ type Row = TreeNode & { editable: boolean; children: Row[] };
 function TreeRow({ node, depth, langs, canManage, isFirst, isLast }: { node: Row; depth: number; langs: { codes: string[]; defaultLang: string }; canManage: boolean; isFirst: boolean; isLast: boolean }) {
   const submit = useSubmit();
   const main = node.translations.find((x) => x.lang === langs.defaultLang) ?? node.translations[0];
-  const Icon = main?.path === "/" ? HomeIcon : node.type === "collection" ? FolderIcon : FileIcon;
+  const Icon = nodeIcon(node.type, main?.path);
   const act = (intent: string) => submit({ id: String(node.id), intent }, { method: "post" });
   return (
     <>
