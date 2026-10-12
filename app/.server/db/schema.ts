@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  customType,
   datetime,
   index,
   int,
@@ -15,6 +16,7 @@ import {
 } from "drizzle-orm/mysql-core";
 import type { ContentDoc } from "~/lib/content";
 import type { MediaVariant } from "~/lib/media";
+import type { ThemeBuildData } from "~/lib/theme/manifest";
 
 const now = () => datetime("created_at").notNull().default(sql`CURRENT_TIMESTAMP`);
 const updated = () =>
@@ -219,6 +221,64 @@ export const menuItemTranslations = mysqlTable(
   },
   (t) => [primaryKey({ columns: [t.itemId, t.lang] })],
 );
+
+// --- Temi ---
+
+const longblob = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "longblob" });
+
+export type ThemeBuildError = { message: string; file: string | null; line: number | null; column: number | null };
+
+export const themes = mysqlTable("themes", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  // Ultima build riuscita dei file attuali (bozza) e build visibile sul sito (pubblicata).
+  draftBuildId: int("draft_build_id"),
+  publishedBuildId: int("published_build_id"),
+  // Errore dell'ultima compilazione: i file sono salvati, ma la bozza resta all'ultima build valida.
+  buildError: json("build_error").$type<ThemeBuildError | null>(),
+  createdAt: now(),
+  updatedAt: updated(),
+});
+
+// Sorgenti del tema: markup, CSS, JS e asset (font, immagini), testo o binari.
+export const themeFiles = mysqlTable(
+  "theme_files",
+  {
+    themeId: int("theme_id")
+      .notNull()
+      .references(() => themes.id, { onDelete: "cascade" }),
+    path: varchar("path", { length: 255 }).notNull(),
+    content: longblob("content").notNull(),
+    updatedAt: updated(),
+  },
+  (t) => [primaryKey({ columns: [t.themeId, t.path] })],
+);
+
+// Build immutabili: AST, manifest e riferimenti agli asset compilati.
+export const themeBuilds = mysqlTable(
+  "theme_builds",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    themeId: int("theme_id")
+      .notNull()
+      .references(() => themes.id, { onDelete: "cascade" }),
+    data: json("data").$type<ThemeBuildData>().notNull(),
+    // Valorizzato quando la build viene pubblicata: lo storico per il rollback.
+    publishedAt: datetime("published_at"),
+    createdBy: int("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: now(),
+  },
+  (t) => [index("theme_builds_theme_idx").on(t.themeId)],
+);
+
+// Asset compilati e statici indirizzati per hash: condivisi tra le build, cache immutabile.
+export const themeAssets = mysqlTable("theme_assets", {
+  hash: varchar("hash", { length: 64 }).primaryKey(),
+  mime: varchar("mime", { length: 128 }).notNull(),
+  content: longblob("content").notNull(),
+  createdAt: now(),
+});
 
 // --- Relazioni ---
 

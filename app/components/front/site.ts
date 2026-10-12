@@ -12,8 +12,14 @@ export type SiteData = {
   menus: Record<string, FrontMenuItem[]>;
   tracking: { ga4Id: string; gtmId: string; clarityId: string };
   consent: ConsentTexts;
-  /** CSS compilato del tema attivo e template per le pagine di errore. */
-  theme: { cssHref: string; notFound: ThemeBundle | null };
+  /** Asset compilati del tema, template per le pagine di errore e tema in anteprima (solo admin). */
+  theme: {
+    css: string | null;
+    js: string | null;
+    assets: Record<string, string>;
+    notFound: ThemeBundle | null;
+    preview: string | null;
+  };
 };
 
 /** Dati globali del sito (lingua, menu, tracking) per i template. */

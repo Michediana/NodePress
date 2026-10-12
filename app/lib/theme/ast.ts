@@ -81,6 +81,7 @@ export const FILTER_NAMES = [
   "pageUrl",
   "homeUrl",
   "media",
+  "asset",
 ] as const;
 
 /** Componenti React del core utilizzabili come tag nel markup. */

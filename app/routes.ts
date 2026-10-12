@@ -61,6 +61,11 @@ export default [
       route("languages", "routes/api/admin/languages.ts"),
       route("settings", "routes/api/admin/settings.ts"),
       route("users", "routes/api/admin/users.ts"),
+      route("themes", "routes/api/admin/themes.ts"),
+      route("themes/:name", "routes/api/admin/theme.ts"),
+      route("themes/:name/files/*", "routes/api/admin/theme-files.ts"),
+      route("themes/:name/publish", "routes/api/admin/theme-publish.ts"),
+      route("themes/:name/export", "routes/api/admin/theme-export.ts"),
     ]),
     route("*", "routes/api/not-found.ts"),
   ]),
@@ -70,7 +75,7 @@ export default [
   route("robots.txt", "routes/seo/robots.ts"),
   route("llms.txt", "routes/seo/llms.ts"),
   route("uploads/*", "routes/media-file.ts"),
-  route("_np/theme/:file", "routes/theme-css.ts"),
+  route("_np/theme/a/:file", "routes/theme-asset.ts"),
 
   // --- Front: tutte le altre rotte ---
   layout("routes/front/layout.tsx", [

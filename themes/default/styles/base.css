@@ -1,14 +1,4 @@
-/* Token del tema: nella fase 2.4 diventeranno modificabili dal pannello. */
-:root {
-  --np-color-bg: #fff;
-  --np-color-ink: oklch(0.145 0 0);
-  --np-color-muted: oklch(0.556 0 0);
-  --np-color-subtle: oklch(0.97 0 0);
-  --np-color-border: oklch(0.922 0 0);
-  --np-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --np-container: 64rem;
-  --np-radius: 0.625rem;
-}
+/* I token (--np-*) sono dichiarati in theme.json. */
 
 body {
   background: var(--np-color-bg);

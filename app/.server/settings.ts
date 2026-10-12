@@ -29,6 +29,7 @@ export type SettingsMap = {
   gtmId: string;
   clarityId: string;
   consentTexts: Record<string, ConsentTexts>;
+  activeTheme: string; // nome del tema attivo sul front
 };
 
 export const defaultSettings: SettingsMap = {
@@ -45,6 +46,7 @@ export const defaultSettings: SettingsMap = {
   gtmId: "",
   clarityId: "",
   consentTexts: {},
+  activeTheme: "default",
 };
 
 export type SettingKey = keyof SettingsMap;

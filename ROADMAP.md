@@ -129,10 +129,10 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 
 **Completata quando:** il sito di esempio è reso dal tema interpretato, identico all'attuale, con SSR, hydration e navigazione client funzionanti.
 
-#### 2.2 — Pipeline del tema e storage
-- Tabelle `themes`, `theme_files`, `theme_builds`; tema attivo dalle impostazioni.
+#### 2.2 — Pipeline del tema e storage ✅
+- Tabelle `themes`, `theme_files`, `theme_builds`, `theme_assets` (asset indirizzati per hash); tema attivo dalle impostazioni.
 - Compilazione al salvataggio: CSS con lightningcss, JS con esbuild, token → custom properties; asset con hash serviti con cache immutabile.
-- Build bozza/pubblicata, rollback, import/export zip.
+- Build bozza/pubblicata, rollback, import/export zip, anteprima della bozza per gli admin (`?np_preview=<tema>`).
 - I template disponibili per i nodi vengono dal tema attivo.
 
 **Completata quando:** si modifica un file del tema via API, la build bozza si aggiorna e pubblicandola il front cambia senza riavvio.

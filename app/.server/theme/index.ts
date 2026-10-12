@@ -1,126 +1,70 @@
-import { createHash } from "node:crypto";
-import { readdir, readFile, stat } from "node:fs/promises";
-import path from "node:path";
-import { transform } from "lightningcss";
+import { createCookie, redirect } from "react-router";
 import { componentPath, type CompiledFile, type ThemeBundle } from "~/lib/theme/ast";
-import { compileMarkup, ThemeCompileError } from "./compile";
+import { defaultTemplates, templateList, type TemplateKind, type ThemeBuildData } from "~/lib/theme/manifest";
+import { getSessionUser } from "../auth";
+import { ensureActiveTheme, findTheme, getBuild } from "./store";
 
-// Caricamento del tema attivo: legge i file da `themes/<nome>/`, compila markup e CSS
-// e tiene il risultato in cache finché i file non cambiano (modifiche visibili senza riavvio).
-// Nella fase 2.2 i file passeranno dal disco al DB, con build bozza/pubblicata.
+// Tema usato dal front: la build pubblicata del tema attivo oppure, per un admin in anteprima,
+// la bozza di un tema qualsiasi. Le build sono immutabili, quindi si tengono in cache per id.
 
-const THEMES_DIR = path.resolve(process.env.THEMES_DIR ?? "themes");
+export type FrontTheme = { name: string; buildId: number; data: ThemeBuildData; preview: boolean };
 
-export const LAYER_ORDER = "@layer np.reset, np.core, theme, np.overrides;";
+const previewCookie = createCookie("np_preview", { path: "/", httpOnly: true, sameSite: "lax" });
 
-export type ThemeManifest = {
-  name: string;
-  label: string;
-  version?: string;
-};
+const MAX_CACHED_BUILDS = 32;
+const buildCache = new Map<number, ThemeBuildData>();
 
-export type CompiledTheme = {
-  manifest: ThemeManifest;
-  files: Record<string, CompiledFile>;
-  css: string;
-  cssHash: string;
-};
-
-type CacheEntry = { signature: string; theme?: CompiledTheme; error?: Error };
-
-const cache = new Map<string, CacheEntry>();
-
-/** Nome del tema attivo. Per ora fisso: nella 2.2 arriverà dalle impostazioni. */
-export function activeThemeName() {
-  return "default";
+async function loadBuild(id: number) {
+  const cached = buildCache.get(id);
+  if (cached) return cached;
+  const build = await getBuild(id);
+  if (!build) throw new Error(`Build del tema ${id} non trovata.`);
+  if (buildCache.size >= MAX_CACHED_BUILDS) buildCache.delete(buildCache.keys().next().value!);
+  buildCache.set(id, build.data);
+  return build.data;
 }
 
-async function listFiles(dir: string, base = ""): Promise<string[]> {
-  const entries = await readdir(path.join(dir, base), { withFileTypes: true });
-  const out: string[] = [];
-  for (const entry of entries) {
-    if (entry.name.startsWith(".")) continue;
-    const rel = base ? `${base}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) out.push(...(await listFiles(dir, rel)));
-    else out.push(rel);
+/**
+ * `?np_preview=<tema>` attiva l'anteprima della bozza (solo admin), `?np_preview=off` la chiude.
+ * Restituisce il redirect da lanciare, oppure null.
+ */
+export async function previewRedirect(request: Request) {
+  const url = new URL(request.url);
+  const value = url.searchParams.get("np_preview");
+  if (value === null) return null;
+  url.searchParams.delete("np_preview");
+  const target = url.pathname + url.search;
+  const user = await getSessionUser(request);
+  if (value === "off" || value === "" || user?.role !== "admin") {
+    return redirect(target, { headers: { "Set-Cookie": await previewCookie.serialize("", { maxAge: 0 }) } });
   }
-  return out.sort();
+  return redirect(target, { headers: { "Set-Cookie": await previewCookie.serialize(value) } });
 }
 
-/** Firma dei file del tema (percorso, dimensione, data di modifica): cambia a ogni salvataggio. */
-async function signatureOf(dir: string, files: string[]) {
-  const stats = await Promise.all(files.map((f) => stat(path.join(dir, f))));
-  return files.map((f, i) => `${f}:${stats[i].size}:${stats[i].mtimeMs}`).join("|");
-}
-
-/** Compila un file CSS del tema; gli `@import` vengono separati per finire in testa al foglio. */
-function compileCss(file: string, source: string) {
-  const imports: string[] = [];
-  const body = source.replace(/@import\s[^;]+;/g, (rule) => {
-    imports.push(rule.replace(/;$/, "").trim());
-    return rule.replace(/[^\n]/g, " ");
-  });
-  try {
-    const { code } = transform({
-      filename: file,
-      code: Buffer.from(body),
-      minify: true,
-      // Il nesting e la sintassi moderna vengono abbassati per questi browser.
-      targets: { chrome: 100 << 16, firefox: 100 << 16, safari: 15 << 16 },
-    });
-    return { imports, css: code.toString() };
-  } catch (error) {
-    const e = error as Error & { loc?: { line: number; column: number } };
-    throw new ThemeCompileError(e.message, file, e.loc?.line ?? 1, e.loc?.column ?? 1);
-  }
-}
-
-async function compileTheme(dir: string, files: string[]): Promise<CompiledTheme> {
-  const manifest = JSON.parse(await readFile(path.join(dir, "theme.json"), "utf8")) as ThemeManifest;
-  const compiled: Record<string, CompiledFile> = {};
-  const imports: string[] = [];
-  const styles: string[] = [];
-
-  for (const file of files) {
-    if (file.endsWith(".np")) {
-      const { meta: _meta, ...result } = compileMarkup(file, await readFile(path.join(dir, file), "utf8"));
-      compiled[file] = result;
-    } else if (file.startsWith("styles/") && file.endsWith(".css")) {
-      const result = compileCss(file, await readFile(path.join(dir, file), "utf8"));
-      imports.push(...result.imports.map((rule) => (/\blayer\b/.test(rule) ? rule : `${rule} layer(theme)`) + ";"));
-      styles.push(result.css);
+export async function getFrontTheme(request: Request): Promise<FrontTheme> {
+  const preview = await previewCookie.parse(request.headers.get("Cookie"));
+  if (typeof preview === "string" && preview) {
+    const user = await getSessionUser(request);
+    const theme = user?.role === "admin" ? await findTheme(preview) : null;
+    if (theme?.draftBuildId) {
+      return {
+        name: theme.name,
+        buildId: theme.draftBuildId,
+        data: await loadBuild(theme.draftBuildId),
+        preview: true,
+      };
     }
   }
-
-  // Il CSS del tema vive nel layer "theme": vince sul core, perde sugli override del pannello.
-  const css = `${LAYER_ORDER}${imports.join("")}@layer theme{${styles.join("")}}`;
-  const cssHash = createHash("sha256").update(css).digest("hex").slice(0, 12);
-  return { manifest, files: compiled, css, cssHash };
-}
-
-/** Tema compilato, dalla cache se i file non sono cambiati. Lancia l'errore di compilazione, se c'è. */
-export async function getTheme(name = activeThemeName()): Promise<CompiledTheme> {
-  const dir = path.join(THEMES_DIR, name);
-  const files = await listFiles(dir);
-  const signature = await signatureOf(dir, files);
-  let entry = cache.get(name);
-  if (entry?.signature !== signature) {
-    try {
-      entry = { signature, theme: await compileTheme(dir, files) };
-    } catch (error) {
-      entry = { signature, error: error as Error };
-    }
-    cache.set(name, entry);
-  }
-  if (entry.error) throw entry.error;
-  return entry.theme!;
+  const active = await ensureActiveTheme();
+  const buildId = active.publishedBuildId!;
+  return { name: active.name, buildId, data: await loadBuild(buildId), preview: false };
 }
 
 /** Il file d'ingresso e tutti i componenti del tema che usa, anche indirettamente. */
-export function bundleFor(theme: CompiledTheme, entry: string): ThemeBundle {
+export function bundleFor(data: ThemeBuildData, entry: string): ThemeBundle {
   const files: Record<string, CompiledFile> = {};
   const visit = (file: string) => {
-    const compiled = theme.files[file];
+    const compiled = data.files[file];
     if (!compiled || files[file]) return;
     files[file] = compiled;
     for (const name of compiled.uses) visit(componentPath(name));
@@ -129,10 +73,16 @@ export function bundleFor(theme: CompiledTheme, entry: string): ThemeBundle {
   return { entry, files };
 }
 
-/** Bundle del template indicato, con ripiego su `templates/default.np`. */
-export function templateBundle(theme: CompiledTheme, template: string) {
+/** Bundle del template del nodo; se il tema non lo ha, quello di default per il tipo. */
+export function templateBundle(data: ThemeBuildData, template: string, kind: TemplateKind) {
   const file = `templates/${template}.np`;
-  return bundleFor(theme, theme.files[file] ? file : "templates/default.np");
+  if (data.files[file]) return bundleFor(data, file);
+  return bundleFor(data, `templates/${defaultTemplates(data.manifest)[kind]}.np`);
 }
 
-export const themeCssHref = (theme: CompiledTheme) => `/_np/theme/${theme.cssHash}.css`;
+/** Template assegnabili ai nodi, dal tema attivo. */
+export async function getTemplateOptions() {
+  const active = await ensureActiveTheme();
+  const { manifest } = await loadBuild(active.publishedBuildId!);
+  return { templates: templateList(manifest), defaults: defaultTemplates(manifest) };
+}

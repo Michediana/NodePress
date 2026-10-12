@@ -1,10 +1,11 @@
 import { isRouteErrorResponse, Link } from "react-router";
 import { loadPage } from "~/.server/front";
 import { getSettings, getSiteUrl } from "~/.server/settings";
-import { getTheme, templateBundle } from "~/.server/theme";
+import { getFrontTheme, templateBundle } from "~/.server/theme";
 import { useSite } from "~/components/front/site";
 import { ThemeRenderer } from "~/components/front/theme/renderer";
 import { mediaUrl } from "~/lib/media";
+import { kindOfNode } from "~/lib/theme/manifest";
 import type { Route } from "./+types/page";
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -12,9 +13,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   const [{ siteName }, siteUrl, theme] = await Promise.all([
     getSettings(["siteName"]),
     getSiteUrl(request),
-    getTheme(),
+    getFrontTheme(request),
   ]);
-  return { ...page, siteName, siteUrl, template: templateBundle(theme, page.node.template) };
+  return {
+    ...page,
+    siteName,
+    siteUrl,
+    template: templateBundle(theme.data, page.node.template, kindOfNode(page.node.type)),
+  };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

@@ -123,4 +123,26 @@
     background: var(--np-consent-fg, #111);
     color: var(--np-consent-bg, #fff);
   }
+
+  .np-preview-badge {
+    position: fixed;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 999px;
+    background: #111;
+    color: #fff;
+    font:
+      500 0.75rem/1.4 system-ui,
+      sans-serif;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+  }
+  .np-preview-badge a {
+    color: inherit;
+    opacity: 0.75;
+  }
 }

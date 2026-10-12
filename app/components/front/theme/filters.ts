@@ -53,4 +53,7 @@ export const filters: Record<(typeof FILTER_NAMES)[number], Filter> = {
 
   /** Media referenziato nel contenuto della pagina, dato il suo id. */
   media: ({ page }, id): MediaRef | null => page?.media[Number(id)] ?? null,
+
+  /** URL di un file statico del tema, es. `asset("assets/logo.svg")`. */
+  asset: ({ site }, file) => site.theme.assets[String(file ?? "").replace(/^\.?\//, "")] ?? "",
 };

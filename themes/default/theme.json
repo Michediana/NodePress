@@ -1,5 +1,23 @@
 {
   "name": "default",
   "label": "NodePress Default",
-  "version": "1.0.0"
+  "version": "1.1.0",
+  "description": "Tema di base di NodePress: tipografia pulita, header con menu e selettore lingua.",
+  "templates": {
+    "default": { "label": "Pagina standard", "kinds": ["page", "item"] },
+    "home": { "label": "Home page", "kinds": ["page"] },
+    "listing": { "label": "Elenco", "kinds": ["listing"] },
+    "article": { "label": "Articolo", "kinds": ["item"] }
+  },
+  "defaults": { "page": "default", "listing": "listing", "item": "article" },
+  "tokens": {
+    "color-bg": { "type": "color", "label": "Sfondo", "group": "Colori", "default": "#ffffff" },
+    "color-ink": { "type": "color", "label": "Testo", "group": "Colori", "default": "oklch(0.145 0 0)" },
+    "color-muted": { "type": "color", "label": "Testo secondario", "group": "Colori", "default": "oklch(0.556 0 0)" },
+    "color-subtle": { "type": "color", "label": "Superfici", "group": "Colori", "default": "oklch(0.97 0 0)" },
+    "color-border": { "type": "color", "label": "Bordi", "group": "Colori", "default": "oklch(0.922 0 0)" },
+    "font-sans": { "type": "font", "label": "Font", "group": "Tipografia", "default": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif" },
+    "container": { "type": "size", "label": "Larghezza contenuto", "group": "Layout", "default": "64rem" },
+    "radius": { "type": "size", "label": "Raggio degli angoli", "group": "Layout", "default": "0.625rem" }
+  }
 }

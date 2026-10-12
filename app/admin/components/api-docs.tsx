@@ -89,6 +89,9 @@ function buildEndpoints(ctx: ApiDocsContext) {
     { method: "GET", path: "/admin/languages", description: t("apiDocs.ep.adminLanguages") },
     { method: "GET", path: "/admin/settings", description: t("apiDocs.ep.settings") },
     { method: "GET", path: "/admin/users", description: t("apiDocs.ep.users") },
+    { method: "GET", path: "/admin/themes", description: t("apiDocs.ep.themes") },
+    { method: "GET", path: "/admin/themes/default/files", description: t("apiDocs.ep.themeFiles") },
+    { method: "POST", path: "/admin/themes/default/publish", description: t("apiDocs.ep.publishTheme"), body: {} },
   );
   return { read, admin };
 }

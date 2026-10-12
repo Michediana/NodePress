@@ -29,30 +29,36 @@ Al primo avvio apri `http://localhost:5173/admin`: la procedura guidata su `/adm
 | `app/routes/admin/` | Pannello di amministrazione |
 | `app/routes/api/` | API REST (`/api/v1/...`) |
 | `app/routes/front/` | Rendering SSR del sito (tutte le rotte non di sistema) |
-| `themes/` | Temi del front (markup `.np` e CSS), compilati a runtime |
-| `app/.server/theme/` | Compilatore e caricamento del tema attivo |
+| `themes/` | Temi di partenza, installati nel DB al primo avvio |
+| `app/.server/theme/` | Compilatore, build, archivio nel DB e tema attivo |
 | `app/components/front/theme/` | Interprete del markup compilato e filtri |
 | `app/admin/locales/it.ts` | Stringhe del pannello (predisposte per l'i18n) |
 
 ## Temi
 
-Il front è reso dal tema attivo in `themes/<nome>/` (per ora `default`). I file vengono compilati a runtime e ricompilati quando cambiano: non serve rifare la build dell'app.
+Il front è reso dal tema attivo. I temi vivono nel database: si creano e si modificano a runtime, senza ricompilare l'app. Ogni salvataggio di un file ricompila il tema in una **build bozza**. Pubblicando, la bozza diventa la versione visibile sul sito, e le build pubblicate restano nello storico per il rollback.
+
+I temi in `themes/` sono temi di partenza: al primo avvio quello attivo (`default`) viene installato nel DB. Le modifiche successive si fanno via API (e dalla fase 2.3 dal pannello).
 
 ```
-themes/default/
-  theme.json          nome ed etichetta del tema
-  templates/*.np      un file per template (default, home, listing, article, 404)
-  components/*.np     componenti riusabili: <PostCard item={item} /> → components/PostCard.np
-  styles/*.css        CSS scritto a mano, con nesting; finisce nel layer "theme"
+theme.json          nome, template per tipo di nodo, default, token di design
+templates/*.np      un file per template (+ 404.np per le pagine di errore)
+components/*.np     componenti riusabili: <PostCard item={item} /> → components/PostCard.np
+styles/*.css        CSS scritto a mano, con nesting; finisce nel layer "theme"
+scripts/main.js     punto d'ingresso del JS (o main.ts), impacchettato con esbuild, solo browser
+assets/*            font, immagini, SVG: serviti con hash e cache immutabile
 ```
 
 I file `.np` usano una sintassi JSX "senza JavaScript": tag HTML (con `class` e attributi HTML normali), espressioni `{…}`, `&&`, `? :`, `.map(item => …)`. Il server non esegue mai il codice del tema: lo compila in un AST JSON che React interpreta. Script, eventi `on*`, variabili e funzioni fuori dalla whitelist sono errori di compilazione, con file, riga e colonna.
 
 - **Variabili:** `page` (pagina corrente, `null` nelle pagine di errore), `site` (lingua, menu, nome del sito), `props` e `children` (nei componenti).
 - **Componenti del core:** `<Link to>`, `<Image media sizes>`, `<Content />` (il contenuto dell'editor), `<LanguageFlag code>`, `<ConsentLink>`.
-- **Filtri:** `date(value, "long")`, `year()`, `menu("header")`, `languages()`, `languageName(code)`, `pageUrl(n)`, `homeUrl()`, `media(id)`.
+- **Filtri:** `date(value, "long")`, `year()`, `menu("header")`, `languages()`, `languageName(code)`, `pageUrl(n)`, `homeUrl()`, `media(id)`, `asset("assets/logo.svg")`.
+- **Token:** dichiarati in `theme.json`, disponibili nel CSS come `var(--np-<nome>)`.
+- **CSS:** `url("../assets/font.woff2")` viene riscritto con l'URL dell'asset; gli `@import` esterni sono ammessi.
+- **JS:** import relativi tra file del tema o da URL `https://`; per l'interattività si usano i custom element.
 
-I template assegnabili ai nodi sono ancora elencati in `app/templates/registry.ts` (dalla fase 2.2 arriveranno dal tema).
+Un admin può vedere la bozza di qualsiasi tema sul sito vero aprendo `/?np_preview=<tema>` (`?np_preview=off` per uscire).
 
 ## API REST
 
@@ -77,6 +83,11 @@ Gestione (scope `admin`):
 - `GET|POST|PATCH|DELETE /api/v1/admin/languages`
 - `GET|PATCH /api/v1/admin/settings`
 - `GET|POST /api/v1/admin/users`
+- `GET|POST /api/v1/admin/themes` (POST JSON `{ name, label, from? }` crea o duplica; multipart con campo `file` importa uno zip)
+- `GET|PATCH|DELETE /api/v1/admin/themes/:name` (PATCH `{ active: true }` attiva il tema)
+- `GET /api/v1/admin/themes/:name/files`, `GET|PUT|DELETE /api/v1/admin/themes/:name/files/<percorso>` (contenuto grezzo nel body; la risposta riporta la build e l'eventuale errore)
+- `POST /api/v1/admin/themes/:name/publish` (body opzionale `{ buildId }` per il rollback)
+- `GET /api/v1/admin/themes/:name/export` (zip)
 
 Esempio:
 

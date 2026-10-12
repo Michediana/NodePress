@@ -4,7 +4,8 @@ import { localizedUrl, normalizeLangCode } from "~/lib/languages";
 import { can } from "~/lib/roles";
 import { joinPath, SLUG_PATTERN } from "~/lib/slug";
 import type { ContentStatus } from "~/lib/status";
-import { templates } from "~/templates/registry";
+import { kindOfNode, type TemplateKind, type TemplateMeta } from "~/lib/theme/manifest";
+import { getTemplateOptions } from "./theme";
 import type { SessionUser } from "./auth";
 import { db, schema, type Tx } from "./db";
 import type { Node, NodeTranslation } from "./db/schema";
@@ -125,7 +126,12 @@ export async function getItems(collectionId: number, options: { page: number; pe
 
 // --- Validazione ---
 
-function assertTemplate(type: NodeType, template: string, kind: "page" | "listing" | "item") {
+/**
+ * Il template deve esistere nel tema attivo. Un valore invariato resta valido anche se il tema
+ * non lo ha (es. dopo un cambio di tema): il front userà il template di default del tipo.
+ */
+function assertTemplate(templates: TemplateMeta[], type: NodeType, template: string, kind: TemplateKind, previous?: string | null) {
+  if (previous !== undefined && template === previous) return;
   const def = templates.find((t) => t.name === template);
   if (!def || !def.kinds.includes(kind)) {
     throw new UserError(`Template "${template}" non valido per ${type}.`);
@@ -165,14 +171,18 @@ export type NodeInput = {
 };
 
 export async function createNode(authorId: number | null, input: NodeInput) {
+  const { templates, defaults } = await getTemplateOptions();
   return db.transaction(async (tx) => {
     await assertParent(tx, input.type, input.parentId);
     if (input.type === "item") {
+      // Gli elementi ereditano il template dal raccoglitore.
       const [parent] = await tx.select().from(nodes).where(eq(nodes.id, input.parentId!));
-      input.template = parent.itemTemplate ?? "article";
+      input.template = parent.itemTemplate ?? defaults.item;
+      assertTemplate(templates, input.type, input.template, "item", parent.itemTemplate);
+    } else {
+      assertTemplate(templates, input.type, input.template, kindOfNode(input.type));
     }
-    assertTemplate(input.type, input.template, input.type === "collection" ? "listing" : input.type === "item" ? "item" : "page");
-    if (input.type === "collection") assertTemplate(input.type, input.itemTemplate ?? "", "item");
+    if (input.type === "collection") assertTemplate(templates, input.type, input.itemTemplate ?? "", "item");
     const [{ max }] = await tx
       .select({ max: sql<number | null>`max(${nodes.sortOrder})` })
       .from(nodes)
@@ -191,14 +201,13 @@ export async function createNode(authorId: number | null, input: NodeInput) {
 }
 
 export async function updateNode(id: number, input: Omit<NodeInput, "type">) {
-  const { defaultLang } = await getSiteLanguages();
+  const [{ defaultLang }, { templates }] = await Promise.all([getSiteLanguages(), getTemplateOptions()]);
   return db.transaction(async (tx) => {
     const [node] = await tx.select().from(nodes).where(eq(nodes.id, id));
     if (!node) throw new UserError("Nodo non trovato.", 404);
-    const kind = node.type === "collection" ? "listing" : node.type === "item" ? "item" : "page";
     const template = node.type === "item" ? node.template : input.template;
-    assertTemplate(node.type, template, kind);
-    if (node.type === "collection") assertTemplate(node.type, input.itemTemplate ?? "", "item");
+    assertTemplate(templates, node.type, template, kindOfNode(node.type), node.template);
+    if (node.type === "collection") assertTemplate(templates, node.type, input.itemTemplate ?? "", "item", node.itemTemplate);
     const parentChanged = (input.parentId ?? null) !== (node.parentId ?? null);
     if (parentChanged) await assertParent(tx, node.type, input.parentId, id);
 

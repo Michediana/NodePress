@@ -4,7 +4,8 @@ import { adminNode, nodeSchema } from "~/.server/api-admin";
 import { pagination } from "~/.server/api-public";
 import { db, schema } from "~/.server/db";
 import { createNode, deleteNode, saveTranslation } from "~/.server/nodes";
-import { defaultTemplate } from "~/templates/registry";
+import { getTemplateOptions } from "~/.server/theme";
+import { kindOfNode } from "~/lib/theme/manifest";
 import type { Route } from "./+types/nodes";
 
 export const loader = ({ request }: Route.LoaderArgs) =>
@@ -32,12 +33,12 @@ export const action = ({ request }: Route.ActionArgs) =>
     if (request.method !== "POST") methodNotAllowed();
     const { user } = await authenticate(request, "admin");
     const input = await readJson(request, nodeSchema);
-    const kind = input.type === "collection" ? "listing" : input.type === "item" ? "item" : "page";
+    const { defaults } = await getTemplateOptions();
     const id = await createNode(user?.id ?? null, {
       parentId: input.parentId,
       type: input.type,
-      template: input.template ?? defaultTemplate[kind],
-      itemTemplate: input.type === "collection" ? (input.itemTemplate ?? defaultTemplate.item) : null,
+      template: input.template ?? defaults[kindOfNode(input.type)],
+      itemTemplate: input.type === "collection" ? (input.itemTemplate ?? defaults.item) : null,
       perPage: input.perPage,
     });
     try {

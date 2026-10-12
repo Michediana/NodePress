@@ -22,7 +22,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Spinner } from "~/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { languageName, langPrefix } from "~/lib/languages";
-import { defaultTemplate, templateKinds } from "~/templates/registry";
+import { getTemplateOptions } from "~/.server/theme";
+import { kindOfNode, templatesOfKind, type TemplateKind } from "~/lib/theme/manifest";
 import type { Route } from "./+types/new";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
@@ -41,7 +42,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     if (collection?.type !== "collection") throw new Response("Raccoglitore non trovato", { status: 404 });
   }
   const options = (await getTreeOptions(langs.defaultLang)).filter((o) => o.type === "page");
-  return { type, parentId, langs, options, collection };
+  const { templates, defaults } = await getTemplateOptions();
+  return { type, parentId, langs, options, collection, templates, templateDefaults: defaults };
 }
 
 const schemaInput = z.object({
@@ -58,11 +60,11 @@ export async function action({ request, context }: Route.ActionArgs) {
   const user = getUser(context);
   return handleUserErrors(async () => {
     const input = parse(schemaInput, formToObject(await request.formData()));
-    const { defaultLang } = await getSiteLanguages();
+    const [{ defaultLang }, { defaults }] = await Promise.all([getSiteLanguages(), getTemplateOptions()]);
     const id = await createNode(user.id, {
       parentId: input.parentId,
       type: input.type,
-      template: input.template || defaultTemplate[input.type === "collection" ? "listing" : input.type === "item" ? "item" : "page"],
+      template: input.template || defaults[kindOfNode(input.type)],
       itemTemplate: input.itemTemplate,
       perPage: input.perPage,
     });
@@ -83,6 +85,8 @@ export default function NewContent({ loaderData, actionData }: Route.ComponentPr
   const [parentId, setParentId] = useState(String(loaderData.parentId ?? ""));
   const slug = useAutoSlug("", "", true);
   const { langs, options, collection } = loaderData;
+  const templateKinds = (kind: TemplateKind) => templatesOfKind(loaderData.templates, kind);
+  const defaultTemplate = loaderData.templateDefaults;
   const parentItems = [
     { value: "", depth: 0, label: <IconLabel icon={ListTreeIcon}>{t("content.root")}</IconLabel> },
     ...options.map((o) => ({ value: String(o.id), depth: o.depth, label: <IconLabel icon={nodeIcon(o.type, o.path)}>{o.label}</IconLabel> })),

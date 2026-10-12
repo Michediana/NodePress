@@ -30,7 +30,8 @@ import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { walkDoc, type ContentDoc } from "~/lib/content";
 import { languageName, langPrefix, localizedUrl } from "~/lib/languages";
 import { effectiveStatus } from "~/lib/status";
-import { defaultTemplate, templateKinds } from "~/templates/registry";
+import { getTemplateOptions } from "~/.server/theme";
+import { templatesOfKind, type TemplateKind, type TemplateMeta } from "~/lib/theme/manifest";
 import type { Route } from "./+types/edit";
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
@@ -96,7 +97,15 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
     parentOptions,
     media,
     collection,
+    templates: (await getTemplateOptions()).templates,
   };
+}
+
+/** Template del tema per un tipo; il valore attuale resta selezionabile anche se il tema non lo ha più. */
+function templateChoices(templates: TemplateMeta[], kind: TemplateKind, current: string | null) {
+  const list = templatesOfKind(templates, kind);
+  if (!current || list.some((tpl) => tpl.name === current)) return list;
+  return [...list, { name: current, label: `${current} ${t("content.templateMissing")}`, kinds: [kind] }];
 }
 
 const saveSchema = z.object({
@@ -175,7 +184,9 @@ export default function EditContent({ loaderData, actionData }: Route.ComponentP
 function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentProps, "loaderData" | "actionData">) {
   const actionData = rawActionData as ActionResult | undefined;
   useActionToast(actionData);
-  const { node, translation, lang, langs, parentPath, parentMissing, parentOptions, media, collection } = loaderData;
+  const { node, translation, lang, langs, parentPath, parentMissing, parentOptions, media, collection, templates } = loaderData;
+  const pageTemplates = templateChoices(templates, node.type === "collection" ? "listing" : "page", node.template);
+  const itemTemplates = templateChoices(templates, "item", node.itemTemplate);
   const parentItems = [
     { value: "", depth: 0, label: <IconLabel icon={ListTreeIcon}>{t("content.root")}</IconLabel> },
     ...parentOptions.map((o) => ({ value: String(o.id), depth: o.depth, label: <IconLabel icon={nodeIcon(o.type, o.path)}>{o.label}</IconLabel> })),
@@ -392,14 +403,14 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
                     <Select
                       name="template"
                       defaultValue={node.template}
-                      items={templateKinds(node.type === "collection" ? "listing" : "page").map((tpl) => ({ value: tpl.name, label: tpl.label }))}
+                      items={pageTemplates.map((tpl) => ({ value: tpl.name, label: tpl.label }))}
                     >
                       <SelectTrigger id="template" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          {templateKinds(node.type === "collection" ? "listing" : "page").map((tpl) => (
+                          {pageTemplates.map((tpl) => (
                             <SelectItem key={tpl.name} value={tpl.name}>
                               {tpl.label}
                             </SelectItem>
@@ -414,15 +425,15 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
                         <FieldLabel htmlFor="itemTemplate">{t("content.itemTemplate")}</FieldLabel>
                         <Select
                           name="itemTemplate"
-                          defaultValue={node.itemTemplate ?? defaultTemplate.item}
-                          items={templateKinds("item").map((tpl) => ({ value: tpl.name, label: tpl.label }))}
+                          defaultValue={node.itemTemplate ?? itemTemplates[0]?.name}
+                          items={itemTemplates.map((tpl) => ({ value: tpl.name, label: tpl.label }))}
                         >
                           <SelectTrigger id="itemTemplate" className="w-full">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              {templateKinds("item").map((tpl) => (
+                              {itemTemplates.map((tpl) => (
                                 <SelectItem key={tpl.name} value={tpl.name}>
                                   {tpl.label}
                                 </SelectItem>
