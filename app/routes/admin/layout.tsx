@@ -14,6 +14,7 @@ import { Form, Link, NavLink, Outlet, redirect, useLocation } from "react-router
 import { getSessionUser, needsSetup, userContext } from "~/.server/auth";
 import { getSiteLanguages } from "~/.server/languages";
 import { getSetting } from "~/.server/settings";
+import { Logo } from "~/admin/components/logo";
 import { t } from "~/admin/i18n";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import {
@@ -130,9 +131,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" render={<Link to="/" target="_blank" />}>
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-semibold">
-                    N
-                  </div>
+                  <Logo className="size-8!" />
                   <div className="flex min-w-0 flex-col leading-tight">
                     <span className="truncate font-medium">{siteName}</span>
                     <span className="truncate text-xs text-muted-foreground">{t("app.viewSite")}</span>
