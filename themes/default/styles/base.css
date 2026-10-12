@@ -1,0 +1,99 @@
+/* Token del tema: nella fase 2.4 diventeranno modificabili dal pannello. */
+:root {
+  --np-color-bg: #fff;
+  --np-color-ink: oklch(0.145 0 0);
+  --np-color-muted: oklch(0.556 0 0);
+  --np-color-subtle: oklch(0.97 0 0);
+  --np-color-border: oklch(0.922 0 0);
+  --np-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --np-container: 64rem;
+  --np-radius: 0.625rem;
+}
+
+body {
+  background: var(--np-color-bg);
+  color: var(--np-color-ink);
+  font-family: var(--np-font-sans);
+}
+
+a {
+  color: inherit;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--np-container);
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.meta {
+  font-size: 0.875rem;
+  color: var(--np-color-muted);
+}
+
+/* Testo del contenuto (blocchi dell'editor). */
+.prose {
+  max-width: 65ch;
+  font-size: 1rem;
+  line-height: 1.75;
+
+  & > * + * {
+    margin-top: 1.25em;
+  }
+  & :where(h2, h3, h4, h5, h6) {
+    margin-bottom: 0;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  & h2 {
+    margin-top: 2em;
+    font-size: 1.5em;
+  }
+  & h3 {
+    margin-top: 1.6em;
+    font-size: 1.25em;
+  }
+  & p {
+    margin-block: 1.25em 0;
+  }
+  & a {
+    font-weight: 500;
+    text-underline-offset: 2px;
+  }
+  & blockquote {
+    margin-inline: 0;
+    padding-left: 1em;
+    border-left: 0.25rem solid var(--np-color-border);
+    font-style: italic;
+  }
+  & :where(ul, ol) {
+    padding-left: 1.625em;
+  }
+  & li + li {
+    margin-top: 0.5em;
+  }
+  & figure {
+    margin-inline: 0;
+  }
+  & figure img {
+    border-radius: var(--np-radius);
+  }
+  & figcaption {
+    margin-top: 0.75em;
+    font-size: 0.875em;
+    color: var(--np-color-muted);
+  }
+  & code {
+    font-size: 0.875em;
+    font-weight: 600;
+  }
+  & hr {
+    margin-block: 3em;
+    border: 0;
+    border-top: 1px solid var(--np-color-border);
+  }
+  & > :first-child {
+    margin-top: 0;
+  }
+}

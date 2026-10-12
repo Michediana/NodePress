@@ -1,0 +1,14 @@
+<article class="post-card">
+  {props.item.image && (
+    <Link to={props.item.url} class="post-card__media">
+      <Image media={props.item.image} sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" />
+    </Link>
+  )}
+  {props.item.publishedAt && (
+    <time datetime={props.item.publishedAt} class="meta">{date(props.item.publishedAt)}</time>
+  )}
+  <h2 class="post-card__title">
+    <Link to={props.item.url}>{props.item.title}</Link>
+  </h2>
+  {props.item.excerpt && <p class="post-card__excerpt">{props.item.excerpt}</p>}
+</article>

@@ -1,0 +1,9 @@
+<Layout>
+  <section class="hero">
+    <h1 class="hero__title">{page.translation.title}</h1>
+    {page.translation.excerpt && <p class="hero__lead">{page.translation.excerpt}</p>}
+  </section>
+  <div class="prose home__content">
+    <Content />
+  </div>
+</Layout>

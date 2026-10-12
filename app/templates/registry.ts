@@ -1,5 +1,5 @@
-// Metadati dei template disponibili. I componenti sono in `app/templates/index.ts`.
-// Per aggiungere un template: crea il componente, poi registralo qui e in index.ts.
+// Metadati dei template disponibili. Il markup è in `themes/<tema>/templates/<nome>.np`.
+// Per aggiungere un template: crea il file nel tema, poi registralo qui.
 
 export type TemplateKind = "page" | "listing" | "item";
 

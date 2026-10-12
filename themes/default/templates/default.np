@@ -1,0 +1,9 @@
+<Layout>
+  <article class="page">
+    <Breadcrumbs />
+    <h1 class="page__title">{page.translation.title}</h1>
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+</Layout>

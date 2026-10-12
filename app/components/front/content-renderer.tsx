@@ -2,14 +2,10 @@ import { Fragment } from "react";
 import type { ContentDoc, ContentMark, ContentNode } from "~/lib/content";
 import { embedSrc } from "~/lib/embed";
 import type { MediaRef } from "~/lib/media";
+import { isExternalUrl, safeUrl } from "~/lib/url";
 import { ResponsiveImage } from "./responsive-image";
 
 type Ctx = { media: Record<number, MediaRef>; lang: string };
-
-function safeHref(href: unknown) {
-  const value = String(href ?? "");
-  return /^(https?:|mailto:|tel:|\/|#)/i.test(value) ? value : "#";
-}
 
 function applyMarks(text: React.ReactNode, marks: ContentMark[] = []) {
   return marks.reduce<React.ReactNode>((child, mark) => {
@@ -25,8 +21,8 @@ function applyMarks(text: React.ReactNode, marks: ContentMark[] = []) {
       case "code":
         return <code>{child}</code>;
       case "link": {
-        const href = safeHref(mark.attrs?.href);
-        const external = /^https?:/i.test(href);
+        const href = safeUrl(mark.attrs?.href) || "#";
+        const external = isExternalUrl(href);
         return (
           <a href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
             {child}
@@ -73,23 +69,19 @@ function renderNode(node: ContentNode, ctx: Ctx): React.ReactNode {
       if (!media) return null;
       return (
         <figure>
-          <ResponsiveImage media={media} lang={ctx.lang} alt={alt} className="rounded-lg" />
+          <ResponsiveImage media={media} lang={ctx.lang} alt={alt} />
           {caption && <figcaption>{caption}</figcaption>}
         </figure>
       );
     }
     case "gallery": {
-      const images = ((node.attrs?.images as { mediaId: number }[]) ?? []).map((img) => ctx.media[img.mediaId]).filter(Boolean);
+      const images = ((node.attrs?.images as { mediaId: number }[]) ?? [])
+        .map((img) => ctx.media[img.mediaId])
+        .filter(Boolean);
       return (
-        <div className="not-prose my-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="np-gallery">
           {images.map((media) => (
-            <ResponsiveImage
-              key={media.id}
-              media={media}
-              lang={ctx.lang}
-              sizes="(min-width: 640px) 33vw, 50vw"
-              className="aspect-square w-full rounded-lg object-cover"
-            />
+            <ResponsiveImage key={media.id} media={media} lang={ctx.lang} sizes="(min-width: 640px) 33vw, 50vw" />
           ))}
         </div>
       );
@@ -99,11 +91,10 @@ function renderNode(node: ContentNode, ctx: Ctx): React.ReactNode {
       const src = embedSrc(url);
       if (src) {
         return (
-          <div className="not-prose my-8 aspect-video">
+          <div className="np-embed">
             <iframe
               src={src}
               title="Video"
-              className="size-full rounded-lg"
               loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -113,7 +104,7 @@ function renderNode(node: ContentNode, ctx: Ctx): React.ReactNode {
       }
       return url ? (
         <p>
-          <a href={safeHref(url)} target="_blank" rel="noopener noreferrer">
+          <a href={safeUrl(url) || "#"} target="_blank" rel="noopener noreferrer">
             {url}
           </a>
         </p>
@@ -121,14 +112,22 @@ function renderNode(node: ContentNode, ctx: Ctx): React.ReactNode {
     }
     case "html":
       // Blocco HTML libero: inserito solo da utenti del pannello.
-      return <div className="not-prose" dangerouslySetInnerHTML={{ __html: String(node.attrs?.html ?? "") }} />;
+      return <div className="np-html" dangerouslySetInnerHTML={{ __html: String(node.attrs?.html ?? "") }} />;
     default:
       return renderChildren(node.content, ctx);
   }
 }
 
 /** Renderizza il JSON del contenuto (formato Tiptap) in componenti React. */
-export function ContentRenderer({ doc, media, lang }: { doc: ContentDoc | null; media: Record<number, MediaRef>; lang: string }) {
+export function ContentRenderer({
+  doc,
+  media,
+  lang,
+}: {
+  doc: ContentDoc | null;
+  media: Record<number, MediaRef>;
+  lang: string;
+}) {
   if (!doc) return null;
   return <>{renderChildren(doc.content, { media, lang })}</>;
 }

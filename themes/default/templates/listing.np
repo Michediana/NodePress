@@ -1,0 +1,17 @@
+<Layout>
+  <div class="listing">
+    <Breadcrumbs />
+    <header class="page__header">
+      <h1 class="page__title">{page.translation.title}</h1>
+      {page.translation.content && (
+        <div class="prose listing__intro">
+          <Content />
+        </div>
+      )}
+    </header>
+    <div class="listing__grid">
+      {page.listing.items.map(item => <PostCard item={item} />)}
+    </div>
+    <Pagination listing={page.listing} />
+  </div>
+</Layout>

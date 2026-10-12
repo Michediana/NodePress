@@ -1,16 +1,20 @@
 import { isRouteErrorResponse, Link } from "react-router";
 import { loadPage } from "~/.server/front";
 import { getSettings, getSiteUrl } from "~/.server/settings";
-import { SiteShell } from "~/templates/components/site-shell";
+import { getTheme, templateBundle } from "~/.server/theme";
 import { useSite } from "~/components/front/site";
+import { ThemeRenderer } from "~/components/front/theme/renderer";
 import { mediaUrl } from "~/lib/media";
-import { getTemplate } from "~/templates";
 import type { Route } from "./+types/page";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const page = await loadPage(request);
-  const [{ siteName }, siteUrl] = await Promise.all([getSettings(["siteName"]), getSiteUrl(request)]);
-  return { ...page, siteName, siteUrl };
+  const [{ siteName }, siteUrl, theme] = await Promise.all([
+    getSettings(["siteName"]),
+    getSiteUrl(request),
+    getTheme(),
+  ]);
+  return { ...page, siteName, siteUrl, template: templateBundle(theme, page.node.template) };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -29,7 +33,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
     ...(alternates.length > 1
       ? [
           ...alternates.map((a) => ({ tagName: "link", rel: "alternate", hrefLang: a.lang, href: siteUrl + a.href })),
-          ...(xDefault ? [{ tagName: "link", rel: "alternate", hrefLang: "x-default", href: siteUrl + xDefault.href }] : []),
+          ...(xDefault
+            ? [{ tagName: "link", rel: "alternate", hrefLang: "x-default", href: siteUrl + xDefault.href }]
+            : []),
         ]
       : []),
     ...(translation.noindex ? [{ name: "robots", content: "noindex, follow" }] : []),
@@ -39,7 +45,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { property: "og:url", content: canonical },
     { property: "og:site_name", content: siteName },
     { property: "og:locale", content: lang.replace("-", "_") },
-    ...(og ? [{ property: "og:image", content: siteUrl + mediaUrl(og.file) }, { name: "twitter:card", content: "summary_large_image" }] : []),
+    ...(og
+      ? [
+          { property: "og:image", content: siteUrl + mediaUrl(og.file) },
+          { name: "twitter:card", content: "summary_large_image" },
+        ]
+      : []),
   ];
 }
 
@@ -48,22 +59,18 @@ export function headers() {
 }
 
 export default function FrontPage({ loaderData }: Route.ComponentProps) {
-  const Template = getTemplate(loaderData.node.template);
-  return <Template page={loaderData} />;
+  const { template, ...page } = loaderData;
+  return <ThemeRenderer bundle={template} page={page} />;
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   const site = useSite();
-  const notFound = isRouteErrorResponse(error) && error.status === 404;
+  const status = isRouteErrorResponse(error) ? error.status : 500;
+  if (site?.theme.notFound) return <ThemeRenderer bundle={site.theme.notFound} page={null} props={{ status }} />;
   return (
-    <SiteShell>
-      <div className="flex flex-col items-start gap-4 py-24">
-        <p className="text-sm font-medium text-muted-foreground">{notFound ? "404" : "Error"}</p>
-        <h1 className="text-4xl font-semibold tracking-tight">{notFound ? "Page not found" : "Something went wrong"}</h1>
-        <Link to={site?.lang && site.lang !== site.defaultLang ? `/${site.lang}` : "/"} className="underline">
-          Home
-        </Link>
-      </div>
-    </SiteShell>
+    <main style={{ padding: "6rem 1rem", fontFamily: "system-ui, sans-serif" }}>
+      <h1>{status === 404 ? "Page not found" : "Something went wrong"}</h1>
+      <Link to={site?.lang && site.lang !== site.defaultLang ? `/${site.lang}` : "/"}>Home</Link>
+    </main>
   );
 }

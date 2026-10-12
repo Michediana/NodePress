@@ -1,0 +1,11 @@
+{props.listing && props.listing.pages > 1 && (
+  <nav aria-label="Pagination" class="pagination">
+    {props.listing.page > 1
+      ? <Link to={pageUrl(props.listing.page - 1)} rel="prev">←</Link>
+      : <span></span>}
+    <span class="meta">{props.listing.page} / {props.listing.pages}</span>
+    {props.listing.page < props.listing.pages
+      ? <Link to={pageUrl(props.listing.page + 1)} rel="next">→</Link>
+      : <span></span>}
+  </nav>
+)}

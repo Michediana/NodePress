@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { CONSENT_COOKIE } from "~/lib/consent";
-import { Button } from "~/components/ui/button";
 import { useSite } from "./site";
 
 type Tracking = { ga4Id: string; gtmId: string; clarityId: string };
@@ -99,14 +98,20 @@ export function ConsentBanner() {
   };
 
   return (
-    <div role="dialog" aria-live="polite" aria-label={consent.title} className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-xl rounded-xl border bg-background p-5 shadow-lg">
-      <p className="font-semibold">{consent.title}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{consent.text}</p>
-      <div className="mt-4 flex justify-end gap-2">
-        <Button variant="outline" onClick={() => choose("denied")}>
+    <div role="dialog" aria-live="polite" aria-label={consent.title} className="np-consent">
+      <p className="np-consent__title">{consent.title}</p>
+      <p className="np-consent__text">{consent.text}</p>
+      <div className="np-consent__actions">
+        <button type="button" className="np-consent__button" onClick={() => choose("denied")}>
           {consent.reject}
-        </Button>
-        <Button onClick={() => choose("granted")}>{consent.accept}</Button>
+        </button>
+        <button
+          type="button"
+          className="np-consent__button np-consent__button--primary"
+          onClick={() => choose("granted")}
+        >
+          {consent.accept}
+        </button>
       </div>
     </div>
   );

@@ -1,0 +1,11 @@
+<!-- Voci di menu con sottomenu annidati: il componente richiama se stesso per i figli. -->
+{props.items.length > 0 && (
+  <ul class={props.nested ? "menu__sub" : "menu__list"}>
+    {props.items.map(item => (
+      <li>
+        <Link to={item.href} class="menu__link" target={item.newTab ? "_blank" : undefined}>{item.label}</Link>
+        {item.children.length > 0 && <MenuList items={item.children} nested={true} />}
+      </li>
+    ))}
+  </ul>
+)}

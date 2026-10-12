@@ -1,0 +1,8 @@
+<!-- Pagine di errore: props.status vale 404 o il codice dell'errore. -->
+<Layout>
+  <div class="error-page">
+    <p class="meta">{props.status === 404 ? "404" : "Error"}</p>
+    <h1 class="page__title">{props.status === 404 ? "Page not found" : "Something went wrong"}</h1>
+    <Link to={homeUrl()}>Home</Link>
+  </div>
+</Layout>

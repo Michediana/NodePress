@@ -19,6 +19,7 @@ COPY ./package.json package-lock.json /app/
 COPY --from=production-dependencies-env /app/node_modules /app/node_modules
 COPY --from=build-env /app/build /app/build
 COPY ./drizzle /app/drizzle
+COPY ./themes /app/themes
 WORKDIR /app
 # I media caricati vanno montati come volume persistente.
 ENV MEDIA_DIR=/app/storage/media

@@ -1,16 +1,7 @@
-import {
-  isRouteErrorResponse,
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useMatches,
-} from "react-router";
+import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useMatches } from "react-router";
 
 import type { Route } from "./+types/root";
 import { ensureMigrated } from "./.server/db";
-import "./app.css";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
@@ -74,12 +65,13 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     stack = error.stack;
   }
 
+  // Nessun CSS qui: la root non carica né il CSS del pannello né quello del tema.
   return (
-    <main className="container mx-auto p-4 pt-16">
-      <h1 className="text-2xl font-semibold">{message}</h1>
-      <p className="text-muted-foreground">{details}</p>
+    <main style={{ maxWidth: "64rem", margin: "0 auto", padding: "4rem 1rem", fontFamily: "system-ui, sans-serif" }}>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>{message}</h1>
+      <p style={{ color: "#666", whiteSpace: "pre-wrap" }}>{details}</p>
       {stack && (
-        <pre className="w-full overflow-x-auto p-4 text-xs">
+        <pre style={{ overflowX: "auto", padding: "1rem", fontSize: "0.75rem" }}>
           <code>{stack}</code>
         </pre>
       )}

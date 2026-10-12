@@ -1,0 +1,18 @@
+<!-- Mostra solo le lingue in cui il contenuto corrente esiste. -->
+{languages().length > 1 && (
+  <nav aria-label="Language" class="lang-switcher">
+    {languages().map(link => (
+      <Link
+        to={link.href}
+        hreflang={link.lang}
+        lang={link.lang}
+        title={link.name}
+        aria-current={link.current ? "true" : undefined}
+        class={link.current ? "lang-switcher__link is-current" : "lang-switcher__link"}
+      >
+        <LanguageFlag code={link.lang} />
+        {link.lang}
+      </Link>
+    ))}
+  </nav>
+)}

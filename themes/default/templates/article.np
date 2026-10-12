@@ -1,0 +1,18 @@
+<Layout>
+  <article class="page">
+    <Breadcrumbs />
+    <header class="page__header">
+      {page.translation.publishedAt && (
+        <time datetime={page.translation.publishedAt} class="meta">{date(page.translation.publishedAt)}</time>
+      )}
+      <h1 class="page__title">{page.translation.title}</h1>
+      {page.translation.excerpt && <p class="page__lead">{page.translation.excerpt}</p>}
+    </header>
+    {page.translation.ogImageId && (
+      <Image media={page.translation.ogImageId} loading="eager" class="page__cover" />
+    )}
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+</Layout>

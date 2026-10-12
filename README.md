@@ -29,18 +29,30 @@ Al primo avvio apri `http://localhost:5173/admin`: la procedura guidata su `/adm
 | `app/routes/admin/` | Pannello di amministrazione |
 | `app/routes/api/` | API REST (`/api/v1/...`) |
 | `app/routes/front/` | Rendering SSR del sito (tutte le rotte non di sistema) |
-| `app/templates/` | Template React del front |
+| `themes/` | Temi del front (markup `.np` e CSS), compilati a runtime |
+| `app/.server/theme/` | Compilatore e caricamento del tema attivo |
+| `app/components/front/theme/` | Interprete del markup compilato e filtri |
 | `app/admin/locales/it.ts` | Stringhe del pannello (predisposte per l'i18n) |
 
-## Template
+## Temi
 
-I template sono componenti React in `app/templates/`. Per aggiungerne uno:
+Il front è reso dal tema attivo in `themes/<nome>/` (per ora `default`). I file vengono compilati a runtime e ricompilati quando cambiano: non serve rifare la build dell'app.
 
-1. crea il componente (riceve `{ page }`, vedi `app/templates/types.ts`);
-2. registra i metadati in `app/templates/registry.ts` (nome, etichetta, tipi di nodo);
-3. aggiungi il componente alla mappa in `app/templates/index.ts`.
+```
+themes/default/
+  theme.json          nome ed etichetta del tema
+  templates/*.np      un file per template (default, home, listing, article, 404)
+  components/*.np     componenti riusabili: <PostCard item={item} /> → components/PostCard.np
+  styles/*.css        CSS scritto a mano, con nesting; finisce nel layer "theme"
+```
 
-Nei template sono disponibili `useSite()`, `useMenu("header")`, `<Menu location="header" />`, `<LanguageSwitcher />`, `<ContentRenderer />` e `<ResponsiveImage />` (in `app/components/front/`).
+I file `.np` usano una sintassi JSX "senza JavaScript": tag HTML (con `class` e attributi HTML normali), espressioni `{…}`, `&&`, `? :`, `.map(item => …)`. Il server non esegue mai il codice del tema: lo compila in un AST JSON che React interpreta. Script, eventi `on*`, variabili e funzioni fuori dalla whitelist sono errori di compilazione, con file, riga e colonna.
+
+- **Variabili:** `page` (pagina corrente, `null` nelle pagine di errore), `site` (lingua, menu, nome del sito), `props` e `children` (nei componenti).
+- **Componenti del core:** `<Link to>`, `<Image media sizes>`, `<Content />` (il contenuto dell'editor), `<LanguageFlag code>`, `<ConsentLink>`.
+- **Filtri:** `date(value, "long")`, `year()`, `menu("header")`, `languages()`, `languageName(code)`, `pageUrl(n)`, `homeUrl()`, `media(id)`.
+
+I template assegnabili ai nodi sono ancora elencati in `app/templates/registry.ts` (dalla fase 2.2 arriveranno dal tema).
 
 ## API REST
 
