@@ -226,6 +226,17 @@ export const menuItemTranslations = mysqlTable(
 
 const longblob = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "longblob" });
 
+/**
+ * JSON salvato come testo: a differenza della colonna JSON di MySQL conserva l'ordine delle
+ * chiavi, che nei temi conta (ordine delle impostazioni, dei template, dei token).
+ */
+const jsonText = <T>(name: string) =>
+  customType<{ data: T; driverData: string }>({
+    dataType: () => "longtext",
+    toDriver: (value) => JSON.stringify(value),
+    fromDriver: (value) => JSON.parse(value) as T,
+  })(name);
+
 export type ThemeBuildError = { message: string; file: string | null; line: number | null; column: number | null };
 
 export const themes = mysqlTable("themes", {
@@ -263,7 +274,7 @@ export const themeBuilds = mysqlTable(
     themeId: int("theme_id")
       .notNull()
       .references(() => themes.id, { onDelete: "cascade" }),
-    data: json("data").$type<ThemeBuildData>().notNull(),
+    data: jsonText<ThemeBuildData>("data").notNull(),
     // Valorizzato quando la build viene pubblicata: lo storico per il rollback.
     publishedAt: datetime("published_at"),
     createdBy: int("created_by").references(() => users.id, { onDelete: "set null" }),

@@ -5,7 +5,24 @@ import type { MediaRef } from "~/lib/media";
 import { isExternalUrl, safeUrl } from "~/lib/url";
 import { ResponsiveImage } from "./responsive-image";
 
-type Ctx = { media: Record<number, MediaRef>; lang: string };
+/** Aggancio per ridisegnare un blocco: restituisce `undefined` per il rendering standard. */
+export type RenderBlock = (node: ContentNode, children: React.ReactNode) => React.ReactNode | undefined;
+
+type Ctx = { media: Record<number, MediaRef>; lang: string; renderBlock?: RenderBlock };
+
+/** Blocchi passati all'aggancio del tema (il blocco HTML no: resta com'è, per sicurezza). */
+const HOOKED = new Set([
+  "paragraph",
+  "heading",
+  "blockquote",
+  "bulletList",
+  "orderedList",
+  "image",
+  "gallery",
+  "embed",
+  "horizontalRule",
+  "section",
+]);
 
 function applyMarks(text: React.ReactNode, marks: ContentMark[] = []) {
   return marks.reduce<React.ReactNode>((child, mark) => {
@@ -40,6 +57,10 @@ function renderChildren(nodes: ContentNode[] | undefined, ctx: Ctx) {
 }
 
 function renderNode(node: ContentNode, ctx: Ctx): React.ReactNode {
+  if (ctx.renderBlock && HOOKED.has(node.type)) {
+    const custom = ctx.renderBlock(node, node.type === "section" ? null : renderChildren(node.content, ctx));
+    if (custom !== undefined) return custom;
+  }
   switch (node.type) {
     case "text":
       return applyMarks(node.text ?? "", node.marks);
@@ -110,6 +131,9 @@ function renderNode(node: ContentNode, ctx: Ctx): React.ReactNode {
         </p>
       ) : null;
     }
+    case "section":
+      // Sezione del tema nel contenuto: la rende il tema (vedi renderBlock); senza tema non mostra nulla.
+      return null;
     case "html":
       // Blocco HTML libero: inserito solo da utenti del pannello.
       return <div className="np-html" dangerouslySetInnerHTML={{ __html: String(node.attrs?.html ?? "") }} />;
@@ -123,11 +147,13 @@ export function ContentRenderer({
   doc,
   media,
   lang,
+  renderBlock,
 }: {
   doc: ContentDoc | null;
   media: Record<number, MediaRef>;
   lang: string;
+  renderBlock?: RenderBlock;
 }) {
   if (!doc) return null;
-  return <>{renderChildren(doc.content, { media, lang })}</>;
+  return <>{renderChildren(doc.content, { media, lang, renderBlock })}</>;
 }

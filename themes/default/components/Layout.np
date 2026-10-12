@@ -1,26 +1,6 @@
-<!-- Struttura comune: header con menu e selettore lingua, contenuto, footer. -->
+<!-- Struttura comune: header e footer sono gruppi di sezioni (groups/*.json). -->
 <div class="site">
-  <header class="site-header">
-    <div class="container site-header__inner">
-      <Link to={homeUrl()} class="site-header__brand">{site.siteName}</Link>
-      <div class="site-header__nav">
-        <nav aria-label="Menu principale" class="menu">
-          <MenuList items={menu("header")} />
-        </nav>
-        <LanguageSwitcher />
-      </div>
-    </div>
-  </header>
-
+  <Group name="header" />
   <main class="container site-main">{children}</main>
-
-  <footer class="site-footer">
-    <div class="container site-footer__inner">
-      <span>© {year()} {site.siteName}</span>
-      <nav aria-label="Menu footer" class="menu">
-        <MenuList items={menu("footer")} />
-      </nav>
-      <ConsentLink class="site-footer__link">Cookie</ConsentLink>
-    </div>
-  </footer>
+  <Group name="footer" />
 </div>

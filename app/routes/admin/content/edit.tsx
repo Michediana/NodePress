@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { walkDoc, type ContentDoc } from "~/lib/content";
 import { languageName, langPrefix, localizedUrl } from "~/lib/languages";
 import { effectiveStatus } from "~/lib/status";
-import { getTemplateOptions } from "~/.server/theme";
+import { getActiveBuild, getTemplateOptions } from "~/.server/theme";
 import { templatesOfKind, type TemplateKind, type TemplateMeta } from "~/lib/theme/manifest";
 import type { Route } from "./+types/edit";
 
@@ -98,6 +98,8 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
     media,
     collection,
     templates: (await getTemplateOptions()).templates,
+    sections: Object.values((await getActiveBuild()).schemas).filter((schema) => schema.inContent),
+    collections: options.filter((o) => o.type === "collection").map((o) => ({ id: o.id, label: o.label })),
   };
 }
 
@@ -325,7 +327,7 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
               {errors.slug && <FieldError>{errors.slug}</FieldError>}
             </Field>
           </FieldGroup>
-          <BlockEditor value={doc} onChange={setDoc} />
+          <BlockEditor value={doc} onChange={setDoc} sections={loaderData.sections} collections={loaderData.collections} />
           <TextareaField name="excerpt" label={t("content.excerpt")} description={t("content.excerptHelp")} defaultValue={translation?.excerpt ?? ""} rows={3} />
         </div>
 

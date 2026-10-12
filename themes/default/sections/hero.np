@@ -1,0 +1,82 @@
+---
+{
+  "label": "Hero",
+  "description": "Titolo grande con testo, immagine opzionale e pulsanti.",
+  "settings": {
+    "title": { "type": "text", "label": "Titolo" },
+    "lead": { "type": "textarea", "label": "Testo" },
+    "image": { "type": "media", "label": "Immagine" },
+    "align": {
+      "type": "select",
+      "label": "Allineamento",
+      "default": "left",
+      "options": [{ "value": "left", "label": "Sinistra" }, { "value": "center", "label": "Centro" }]
+    }
+  },
+  "slots": { "actions": { "label": "Pulsanti", "accepts": ["button"] } }
+}
+---
+<section class="hero" data-align={settings.align}>
+  <div class="hero__text">
+    <h1 class="hero__title">{settings.title}</h1>
+    {settings.lead && <p class="hero__lead">{settings.lead}</p>}
+    <div class="hero__actions">
+      <Slot name="actions" />
+    </div>
+  </div>
+  {settings.image && <Image media={settings.image} sizes="(min-width: 1024px) 40vw, 100vw" loading="eager" class="hero__image" />}
+</section>
+
+<style>
+  .hero {
+    display: grid;
+    gap: 2rem;
+    align-items: center;
+    padding-block: 5rem 3rem;
+
+    &:has(.hero__image) {
+      @media (min-width: 1024px) {
+        grid-template-columns: 3fr 2fr;
+      }
+    }
+    &[data-align="center"] {
+      text-align: center;
+      justify-items: center;
+      & .hero__actions {
+        justify-content: center;
+      }
+    }
+  }
+  .hero__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .hero__title {
+    max-width: 48rem;
+    margin: 0;
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+  .hero__lead {
+    max-width: 42rem;
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--np-color-muted);
+  }
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    &:empty {
+      display: none;
+    }
+  }
+  .hero__image {
+    width: 100%;
+    border-radius: var(--np-radius);
+  }
+</style>

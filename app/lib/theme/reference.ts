@@ -95,6 +95,13 @@ export const GLOBAL_DOCS: Record<string, FieldDoc> = {
   },
   props: { doc: 'Attributi passati al componente: `<Card title="…" />` → `props.title`.' },
   children: { doc: "Contenuto passato tra i tag del componente: `<Box>…</Box>`." },
+  settings: {
+    doc: "Solo nelle sezioni: impostazioni dichiarate nel frontmatter, con default, valori del JSON e dati legati.",
+  },
+  section: {
+    doc: "Solo nelle sezioni: la sezione corrente.",
+    fields: { id: { doc: "Id della sezione nel template." }, type: { doc: "Tipo della sezione (nome del file)." } },
+  },
 };
 
 export type FilterDoc = { signature: string; doc: string; snippet: string; returns?: Record<string, FieldDoc> };
@@ -184,6 +191,16 @@ export const COMPONENT_DOCS: Record<(typeof CORE_COMPONENTS)[number], ComponentD
     doc: "Pulsante che riapre le preferenze cookie (visibile solo se il tracking è attivo).",
     props: { class: "Classi CSS" },
     snippet: "ConsentLink>$1</ConsentLink>",
+  },
+  Slot: {
+    doc: "Solo nelle sezioni: rende le sezioni annidate in uno slot dichiarato nel frontmatter.",
+    props: { name: "Nome dello slot (testo fisso)" },
+    snippet: 'Slot name="$1" />',
+  },
+  Group: {
+    doc: "Rende un gruppo di sezioni condiviso, da groups/<name>.json (es. header, footer).",
+    props: { name: "Nome del gruppo (testo fisso)" },
+    snippet: 'Group name="$1" />',
   },
 };
 

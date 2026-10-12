@@ -1,18 +1,35 @@
 import type * as Monaco from "monaco-editor";
 import { ALLOWED_METHODS } from "~/lib/theme/ast";
 import { COMMON_TAGS, COMPONENT_DOCS, docAt, FILTER_DOCS, GLOBAL_DOCS, type FieldDoc } from "~/lib/theme/reference";
+import type { SectionSchema } from "~/lib/theme/sections";
+import { themeJsonSchemas } from "./json-schemas";
 
 // Monaco viene caricato solo nel browser e solo nella pagina dell'editor (import dinamico):
 // è pesante e non deve finire nel bundle del resto del pannello.
 
 export type MonacoApi = typeof Monaco;
 
-/** Contesto del tema aperto, letto da autocompletamento e hover. */
-const context = { components: [] as string[], tokens: [] as string[] };
+/** Contesto del tema aperto, letto da autocompletamento, hover e schemi JSON. */
+const context = { components: [] as string[], tokens: [] as string[], schemas: {} as Record<string, SectionSchema> };
 
-export function setThemeContext(value: { components: string[]; tokens: string[] }) {
-  context.components = value.components;
-  context.tokens = value.tokens;
+let api: MonacoApi | null = null;
+
+export function setThemeContext(value: {
+  components: string[];
+  tokens: string[];
+  schemas: Record<string, SectionSchema>;
+}) {
+  Object.assign(context, value);
+  if (api) applyJsonSchemas(api);
+}
+
+/** Validazione e completamento di template JSON, gruppi e theme.json. */
+function applyJsonSchemas(monaco: MonacoApi) {
+  monaco.json.jsonDefaults.setDiagnosticsOptions({
+    validate: true,
+    enableSchemaRequest: false,
+    schemas: themeJsonSchemas(context.schemas, context.components),
+  });
 }
 
 let loading: Promise<MonacoApi> | null = null;
@@ -23,6 +40,8 @@ export function loadMonaco() {
     const monaco = await import("monaco-editor");
     registerNp(monaco);
     registerCssTokens(monaco);
+    applyJsonSchemas(monaco);
+    api = monaco;
     return monaco;
   })();
   return loading;
@@ -141,6 +160,25 @@ function registerNp(monaco: MonacoApi) {
   const Snippet = monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet;
   const md = (value: string) => ({ value });
 
+  /** Campi di `settings` dichiarati nel frontmatter del file aperto (sezioni). */
+  function frontmatterSettings(text: string): Record<string, FieldDoc> {
+    const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+    if (!match) return {};
+    try {
+      const meta = JSON.parse(match[1]) as {
+        settings?: Record<string, { type?: string; label?: string; help?: string }>;
+      };
+      return Object.fromEntries(
+        Object.entries(meta.settings ?? {}).map(([key, def]) => [
+          key,
+          { doc: [def.label, def.type && `\`${def.type}\``, def.help].filter(Boolean).join(" · ") || key },
+        ]),
+      );
+    } catch {
+      return {}; // frontmatter in scrittura: JSON non ancora valido
+    }
+  }
+
   /** Variabili introdotte da `.map(item => …)` prima del cursore, con i campi noti. */
   function mapLocals(text: string) {
     const locals: Record<string, FieldDoc> = {};
@@ -164,6 +202,7 @@ function registerNp(monaco: MonacoApi) {
       const before = model.getValueInRange(new monaco.Range(1, 1, position.lineNumber, position.column));
       const line = before.slice(before.lastIndexOf("\n") + 1);
       const locals = mapLocals(before);
+      locals.settings = { doc: GLOBAL_DOCS.settings.doc, fields: frontmatterSettings(model.getValue()) };
 
       // Tag: componenti del core, del tema e HTML.
       if (/<[\w-]*$/.test(line)) {
@@ -290,7 +329,11 @@ function registerNp(monaco: MonacoApi) {
       const line = model.getLineContent(position.lineNumber).slice(0, word.endColumn - 1);
       const path = /([A-Za-z_$][\w$]*(?:\.[\w$]+)*)$/.exec(line)?.[1];
       const before = model.getValueInRange(new monaco.Range(1, 1, position.lineNumber, word.startColumn));
-      const doc = path ? docAt(path.split("."), mapLocals(before)) : null;
+      const locals = {
+        ...mapLocals(before),
+        settings: { doc: GLOBAL_DOCS.settings.doc, fields: frontmatterSettings(model.getValue()) },
+      };
+      const doc = path ? docAt(path.split("."), locals) : null;
       return doc ? { range, contents: [{ value: `\`${path}\`` }, { value: doc.doc }] } : null;
     },
   });

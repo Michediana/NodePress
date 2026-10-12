@@ -11,7 +11,9 @@ import {
   type ThemeBuildData,
   type ThemeManifest,
 } from "~/lib/theme/manifest";
-import { compileMarkup, ThemeCompileError } from "./compile";
+import { OVERRIDABLE_BLOCKS, type SectionSchema, type SectionTree } from "~/lib/theme/sections";
+import { compileMarkup, ThemeCompileError, type EmbeddedBlock } from "./compile";
+import { parseSectionSchema, parseTree } from "./sections";
 
 // Build di un tema: dai sorgenti (percorso → contenuto) a markup compilato, CSS, JS e asset.
 // Nessun codice del tema viene eseguito: il markup diventa AST, il JS viene solo impacchettato
@@ -114,7 +116,18 @@ function tokensCss(manifest: ThemeManifest) {
   return `:root{${decls.join(";")}}`;
 }
 
-function compileCss(file: string, source: string, resolveUrl: (url: string) => string | null) {
+/** Selettore `[data-np-section="<tipo>"]` nel formato dei visitor di lightningcss. */
+const sectionAttr = (type: string) => ({
+  type: "attribute" as const,
+  name: "data-np-section",
+  operation: { operator: "equal" as const, value: type, caseSensitivity: "case-sensitive" as const },
+});
+
+/**
+ * Compila un foglio di stile. Con `scope` (il tipo di una sezione) ogni selettore viene limitato
+ * alla sezione: `.hero` → `[data-np-section="hero"] .hero`, `:scope` → il contenitore stesso.
+ */
+function compileCss(file: string, source: string, resolveUrl: (url: string) => string | null, scope?: string) {
   const imports: string[] = [];
   const body = source.replace(/@import\s[^;]+;/g, (rule) => {
     imports.push(rule.replace(/;$/, "").trim());
@@ -129,6 +142,18 @@ function compileCss(file: string, source: string, resolveUrl: (url: string) => s
       // Il nesting e la sintassi moderna vengono abbassati per questi browser.
       targets: { chrome: 100 << 16, firefox: 100 << 16, safari: 15 << 16 },
       visitor: {
+        ...(scope
+          ? {
+              Selector(selector) {
+                // Le regole annidate (&) ereditano lo scope dalla regola che le contiene.
+                if (selector.some((c) => c.type === "nesting")) return selector;
+                const attr = sectionAttr(scope);
+                const first = selector[0];
+                if (first?.type === "pseudo-class" && first.kind === "scope") return [attr, ...selector.slice(1)];
+                return [attr, { type: "combinator", value: "descendant" }, ...selector];
+              },
+            }
+          : {}),
         Url(url) {
           const resolved = resolveUrl(url.url);
           if (resolved === null) {
@@ -151,10 +176,12 @@ function compileCss(file: string, source: string, resolveUrl: (url: string) => s
   }
 }
 
-async function bundleJs(sources: ThemeSources, entry: string) {
+/** Impacchetta il JS del tema; `virtual` aggiunge file che non sono tra i sorgenti (script delle sezioni). */
+async function bundleJs(sources: ThemeSources, entry: string, virtual: Map<string, string> = new Map()) {
+  const has = (p: string) => sources.has(p) || virtual.has(p);
   const resolveRel = (importer: string, request: string) => {
     const base = path.posix.join(path.posix.dirname(importer), request);
-    return [base, `${base}.js`, `${base}.ts`, `${base}/index.js`, `${base}/index.ts`].find((p) => sources.has(p));
+    return [base, `${base}.js`, `${base}.ts`, `${base}/index.js`, `${base}/index.ts`].find(has);
   };
   try {
     const result = await esbuild.build({
@@ -184,7 +211,7 @@ async function bundleJs(sources: ThemeSources, entry: string) {
             build.onLoad({ filter: /.*/, namespace: "theme" }, (args) => {
               const ext = path.posix.extname(args.path);
               const loader = ext === ".ts" ? "ts" : ext === ".json" ? "json" : ext === ".css" ? "text" : "js";
-              return { contents: text(sources, args.path), loader };
+              return { contents: virtual.get(args.path) ?? text(sources, args.path), loader };
             });
           },
         },
@@ -221,17 +248,79 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
     assetUrls[file] = assetUrl(hash, ext);
   }
 
-  // Markup.
+  // Markup: template, componenti, sezioni e blocchi del contenuto.
   const compiled: Record<string, CompiledFile> = {};
+  const schemas: Record<string, SectionSchema> = {};
+  const sectionStyles: { file: string; type: string; block: EmbeddedBlock }[] = [];
+  const sectionScripts = new Map<string, string>();
   for (const file of files.filter((f) => f.endsWith(".np"))) {
-    const { meta: _meta, ...result } = compileMarkup(file, text(sources, file));
+    const { meta, style, script, ...result } = compileMarkup(file, text(sources, file));
     compiled[file] = result;
+    const isSection = /^sections\/[a-z0-9][a-z0-9-]*\.np$/.test(file);
+    if (file.startsWith("sections/") && !isSection) {
+      throw new ThemeCompileError(
+        "Le sezioni stanno direttamente in sections/, con un nome in minuscolo (es. sections/hero.np).",
+        file,
+        1,
+        1,
+      );
+    }
+    if ((style || script) && !isSection) {
+      throw new ThemeCompileError(
+        "<style> e <script> sono ammessi solo nelle sezioni: usa styles/ e scripts/.",
+        file,
+        (style ?? script)!.line,
+        1,
+      );
+    }
+    if (isSection) {
+      const schema = parseSectionSchema(file, meta);
+      schemas[schema.name] = schema;
+      if (style) sectionStyles.push({ file, type: schema.name, block: style });
+      // Le righe vuote iniziali allineano gli errori di esbuild alle righe del file .np.
+      if (script) sectionScripts.set(`${file}.js`, "\n".repeat(script.line - 1) + script.content);
+    } else if (meta !== null) {
+      throw new ThemeCompileError("Il frontmatter è ammesso solo nelle sezioni.", file, 1, 1);
+    }
+    if (file.startsWith("blocks/")) {
+      const block = file.slice("blocks/".length, -".np".length);
+      if (!(OVERRIDABLE_BLOCKS as readonly string[]).includes(block)) {
+        throw new ThemeCompileError(
+          `Blocco "${block}" non ridisegnabile. Ammessi: ${OVERRIDABLE_BLOCKS.join(", ")}.`,
+          file,
+          1,
+          1,
+        );
+      }
+    }
   }
+  const components = new Set(
+    Object.keys(compiled)
+      .filter((f) => /^components\/[^/]+\.np$/.test(f))
+      .map((f) => f.slice("components/".length, -".np".length)),
+  );
+
+  // Alberi di sezioni: template JSON e gruppi.
+  const trees: Record<string, SectionTree> = {};
+  for (const file of files.filter((f) => /^(templates|groups)\/[^/]+\.json$/.test(f))) {
+    trees[file] = parseTree(file, text(sources, file), schemas, components);
+  }
+
   const templates = templateList(manifest);
   for (const tpl of templates) {
-    if (!compiled[`templates/${tpl.name}.np`]) {
+    const np = compiled[`templates/${tpl.name}.np`];
+    const json = trees[`templates/${tpl.name}.json`];
+    if (np && json) {
       throw new ThemeCompileError(
-        `Il template "${tpl.name}" è dichiarato ma manca templates/${tpl.name}.np.`,
+        `Il template "${tpl.name}" esiste sia come .np sia come .json: tienine uno.`,
+        `templates/${tpl.name}.json`,
+        1,
+        1,
+      );
+    }
+    if (!np && !json) {
+      throw new ThemeCompileError(
+        `Il template "${tpl.name}" è dichiarato ma manca templates/${tpl.name}.np (o .json).`,
         "theme.json",
         1,
         1,
@@ -253,8 +342,13 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
   }
   for (const file of Object.values(compiled)) {
     for (const name of file.uses) {
-      if (!compiled[`components/${name}.np`]) {
+      if (!components.has(name)) {
         throw new ThemeCompileError(`Componente <${name}> non trovato: manca components/${name}.np.`, file.path, 1, 1);
+      }
+    }
+    for (const name of file.groups) {
+      if (!trees[`groups/${name}.json`]) {
+        throw new ThemeCompileError(`Gruppo "${name}" non trovato: manca groups/${name}.json.`, file.path, 1, 1);
       }
     }
   }
@@ -272,6 +366,17 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
     imports.push(...result.imports.map((rule) => (/\blayer\b/.test(rule) ? rule : `${rule} layer(theme)`) + ";"));
     styles.push(result.css);
   }
+  // Stili delle sezioni, limitati alla sezione, dopo i fogli globali.
+  for (const { file, type, block } of sectionStyles) {
+    const resolveUrl = (url: string) => {
+      if (/^(https?:|data:|#|\/)/i.test(url)) return url;
+      const target = path.posix.normalize(path.posix.join("sections", url.replace(/[?#].*$/, "")));
+      return assetUrls[target] ?? null;
+    };
+    const result = compileCss(file, "\n".repeat(block.line - 1) + block.content, resolveUrl, type);
+    imports.push(...result.imports.map((rule) => (/\blayer\b/.test(rule) ? rule : `${rule} layer(theme)`) + ";"));
+    styles.push(result.css);
+  }
   let css: string | null = null;
   const tokens = tokensCss(manifest);
   if (styles.length || tokens) {
@@ -281,11 +386,14 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
     css = assetUrl(hash, ".css");
   }
 
-  // JS: punto d'ingresso scripts/main.js (o .ts), solo per il browser.
+  // JS: scripts/main.js (o .ts) più gli script delle sezioni, solo per il browser.
   let js: string | null = null;
-  const entry = ["scripts/main.js", "scripts/main.ts"].find((f) => sources.has(f));
-  if (entry) {
-    const content = Buffer.from(await bundleJs(sources, entry));
+  const main = ["scripts/main.js", "scripts/main.ts"].find((f) => sources.has(f));
+  if (main || sectionScripts.size) {
+    const entry = "__entry__.js";
+    const imports = [...(main ? [main] : []), ...sectionScripts.keys()].map((f) => `import "./${f}";`);
+    const virtual = new Map([...sectionScripts, [entry, imports.join("\n")]]);
+    const content = Buffer.from(await bundleJs(sources, entry, virtual));
     const hash = hashOf(content);
     assets.push({ hash, mime: "text/javascript; charset=utf-8", content });
     js = assetUrl(hash, ".js");
@@ -296,6 +404,8 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
     data: {
       manifest,
       files: compiled,
+      schemas,
+      trees,
       css,
       js,
       assets: assetUrls,
@@ -313,8 +423,33 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
 export async function lintThemeFile(file: string, source: string): Promise<ThemeCompileError | null> {
   try {
     const ext = path.posix.extname(file).toLowerCase();
-    if (ext === ".np") compileMarkup(file, source);
-    else if (file === "theme.json") parseManifest(source);
+    if (ext === ".np") {
+      const { meta, style, script } = compileMarkup(file, source);
+      if (file.startsWith("sections/")) {
+        const schema = parseSectionSchema(file, meta);
+        if (style) compileCss(file, "\n".repeat(style.line - 1) + style.content, (url) => url, schema.name);
+        if (script) {
+          try {
+            await esbuild.transform("\n".repeat(script.line - 1) + script.content, {
+              loader: "js",
+              sourcefile: file,
+              logLevel: "silent",
+            });
+          } catch (error) {
+            const first = (error as esbuild.TransformFailure).errors?.[0];
+            if (!first) throw error;
+            throw new ThemeCompileError(first.text, file, first.location?.line ?? 1, (first.location?.column ?? 0) + 1);
+          }
+        }
+      } else if (style || script) {
+        throw new ThemeCompileError(
+          "<style> e <script> sono ammessi solo nelle sezioni: usa styles/ e scripts/.",
+          file,
+          (style ?? script)!.line,
+          1,
+        );
+      }
+    } else if (file === "theme.json") parseManifest(source);
     else if (ext === ".css") compileCss(file, source, (url) => url);
     else if (ext === ".js" || ext === ".ts") {
       try {

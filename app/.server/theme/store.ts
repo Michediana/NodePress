@@ -82,8 +82,15 @@ export async function getBuild(id: number) {
   return row ?? null;
 }
 
-/** Ricompila il tema dai sorgenti salvati e aggiorna la bozza. */
-export async function rebuild(theme: ThemeRow, userId: number | null): Promise<BuildOutcome> {
+/**
+ * Ricompila il tema dai sorgenti salvati e aggiorna la bozza.
+ * Con `force` ricompila anche se i sorgenti non sono cambiati (es. dopo un aggiornamento di NodePress).
+ */
+export async function rebuild(
+  theme: ThemeRow,
+  userId: number | null,
+  options: { force?: boolean } = {},
+): Promise<BuildOutcome> {
   let result: Awaited<ReturnType<typeof buildTheme>>;
   try {
     result = await buildTheme(await readSources(theme.id));
@@ -95,7 +102,7 @@ export async function rebuild(theme: ThemeRow, userId: number | null): Promise<B
 
   // Sorgenti identici alla bozza attuale: nessuna nuova build.
   const draft = theme.draftBuildId ? await getBuild(theme.draftBuildId) : null;
-  if (draft && draft.data.sourceHash === result.data.sourceHash) {
+  if (!options.force && draft && draft.data.sourceHash === result.data.sourceHash) {
     await db.update(themes).set({ buildError: null }).where(eq(themes.id, theme.id));
     return { buildId: draft.id, error: null };
   }

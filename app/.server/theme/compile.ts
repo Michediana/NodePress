@@ -121,6 +121,15 @@ function cleanJsxText(value: string) {
 const blank = (text: string) => text.replace(/[^\n]/g, " ");
 
 /** Separa il frontmatter JSON (`---` … `---`) e toglie i commenti HTML. */
+/** Blocco `<style>` o `<script>` di un file `.np`, con la riga in cui inizia il suo contenuto. */
+export type EmbeddedBlock = { content: string; line: number };
+
+const lineAt = (text: string, index: number) => text.slice(0, index).split("\n").length;
+
+/**
+ * Separa il frontmatter JSON (`---` … `---`), i blocchi `<style>` e `<script>` e i commenti HTML
+ * dal markup. Le parti tolte diventano spazi: righe e colonne del markup restano invariate.
+ */
 export function splitSource(source: string) {
   let meta: unknown = null;
   let body = source;
@@ -130,11 +139,23 @@ export function splitSource(source: string) {
     body = blank(fm[0]) + source.slice(fm[0].length);
   }
   body = body.replace(/<!--[\s\S]*?-->/g, blank);
-  return { meta, body };
+  const extract = (tag: "style" | "script") => {
+    let block: EmbeddedBlock | null = null;
+    body = body.replace(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g"), (match, content: string, offset: number) => {
+      if (block) throw new SyntaxError(`Un solo blocco <${tag}> per file.`);
+      block = { content, line: lineAt(body, offset + `<${tag}>`.length) };
+      return blank(match);
+    });
+    return block as EmbeddedBlock | null;
+  };
+  const style = extract("style");
+  const script = extract("script");
+  return { meta, body, style, script };
 }
 
 class Compiler {
   uses = new Set<string>();
+  groups = new Set<string>();
 
   constructor(private file: string) {}
 
@@ -288,6 +309,17 @@ class Compiler {
       kind = "html";
     }
     const attrs = opening.attributes.map((a: N) => this.attr(a, kind, scope));
+    if (tag === "Group" || tag === "Slot") {
+      // Il nome deve essere una stringa fissa: i gruppi usati si conoscono già in compilazione.
+      const name = opening.attributes.find((a: N) => a.type === "JSXAttribute" && a.name.name === "name");
+      if (name?.value?.type !== "Literal" || typeof name.value.value !== "string") {
+        this.fail(
+          opening.name,
+          `<${tag}> richiede un attributo name con un testo fisso, es. <${tag} name="header" />.`,
+        );
+      }
+      if (tag === "Group") this.groups.add(name.value.value);
+    }
     return { k: "el", kind, tag, attrs, children: this.children(node.children, scope) };
   }
 
@@ -339,12 +371,22 @@ class Compiler {
 }
 
 /** Compila il markup di un file `.np` in AST. Lancia `ThemeCompileError` se non valido. */
-export function compileMarkup(file: string, source: string): CompiledFile & { meta: unknown } {
+export type CompiledMarkup = CompiledFile & {
+  meta: unknown;
+  style: EmbeddedBlock | null;
+  script: EmbeddedBlock | null;
+};
+
+export function compileMarkup(file: string, source: string): CompiledMarkup {
   let split: ReturnType<typeof splitSource>;
   try {
     split = splitSource(source);
   } catch (error) {
-    throw new ThemeCompileError(`Frontmatter JSON non valido: ${(error as Error).message}`, file, 1, 1);
+    const message =
+      error instanceof SyntaxError && error.message.startsWith("Un solo")
+        ? error.message
+        : `Frontmatter JSON non valido: ${(error as Error).message}`;
+    throw new ThemeCompileError(message, file, 1, 1);
   }
   const code = `<>${split.body}</>`;
   const compiler = new Compiler(file);
@@ -358,5 +400,13 @@ export function compileMarkup(file: string, source: string): CompiledFile & { me
   })();
   if (code.slice(ast.end).trim()) compiler.fail(null, "Contenuto non valido dopo la fine del markup.");
   const root = compiler.expr(ast, new Set(GLOBALS));
-  return { path: file, root, uses: [...compiler.uses], meta: split.meta };
+  return {
+    path: file,
+    root,
+    uses: [...compiler.uses],
+    groups: [...compiler.groups],
+    meta: split.meta,
+    style: split.style,
+    script: split.script,
+  };
 }

@@ -1,0 +1,54 @@
+{
+  "layout": "Layout",
+  "sections": [
+    {
+      "id": "hero",
+      "type": "hero",
+      "settings": {
+        "title": { "bind": "page.translation.title" },
+        "lead": { "bind": "page.translation.excerpt" },
+        "image": { "bind": "page.translation.ogImageId" }
+      },
+      "slots": {
+        "actions": [
+          {
+            "id": "hero-news",
+            "type": "button",
+            "settings": {
+              "label": { "it": "Leggi le novità", "en": "Read the news" },
+              "url": { "it": "/novita", "en": "/en/news" }
+            }
+          }
+        ]
+      }
+    },
+    { "id": "content", "type": "page-content" },
+    {
+      "id": "latest",
+      "type": "post-grid",
+      "settings": {
+        "title": { "it": "Ultime notizie", "en": "Latest news" },
+        "items": { "collection": "/novita", "limit": 3 },
+        "moreLabel": { "it": "Tutte le notizie", "en": "All news" },
+        "moreUrl": { "it": "/novita", "en": "/en/news" }
+      }
+    },
+    {
+      "id": "cta",
+      "type": "cta",
+      "settings": {
+        "title": { "it": "Hai un progetto in mente?", "en": "Got a project in mind?" },
+        "text": { "it": "Raccontaci cosa vuoi costruire: ti rispondiamo entro un giorno lavorativo.", "en": "Tell us what you want to build: we reply within one business day." }
+      },
+      "slots": {
+        "buttons": [
+          {
+            "id": "cta-about",
+            "type": "button",
+            "settings": { "label": { "it": "Chi siamo", "en": "About us" }, "url": { "it": "/chi-siamo", "en": "/en/about" } }
+          }
+        ]
+      }
+    }
+  ]
+}

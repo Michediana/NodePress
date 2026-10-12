@@ -50,6 +50,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     },
     files: files.map((f) => ({ path: f.path, size: Number(f.size) })),
     tokens: Object.keys(draft?.data.manifest.tokens ?? {}),
+    // Dalla bozza: l'autocompletamento dei JSON segue le sezioni appena salvate.
+    schemas: draft?.data.schemas ?? {},
   };
 }
 
@@ -69,7 +71,7 @@ function starter(path: string) {
 }
 
 export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
-  const { theme, files, tokens } = loaderData;
+  const { theme, files, tokens, schemas } = loaderData;
   const api = `/admin/appearance/${theme.name}/api`;
   const revalidator = useRevalidator();
   const editor = useRef<CodeEditorHandle>(null);
@@ -92,8 +94,8 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
 
   useEffect(() => {
     const components = files.filter((f) => /^components\/[^/]+\.np$/.test(f.path)).map((f) => f.path.slice(11, -3));
-    setThemeContext({ components, tokens });
-  }, [files, tokens]);
+    setThemeContext({ components, tokens, schemas });
+  }, [files, tokens, schemas]);
 
   const anyDirty = Object.values(dirty).some(Boolean);
   useBeforeUnload(

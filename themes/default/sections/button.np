@@ -1,0 +1,41 @@
+---
+{
+  "label": "Pulsante",
+  "settings": {
+    "label": { "type": "text", "label": "Testo", "default": "Scopri di più" },
+    "url": { "type": "link", "label": "Link", "default": "/" },
+    "variant": {
+      "type": "select",
+      "label": "Stile",
+      "default": "primary",
+      "options": [{ "value": "primary", "label": "Pieno" }, { "value": "secondary", "label": "Contorno" }]
+    }
+  }
+}
+---
+<Link to={settings.url} class={`button button--${settings.variant}`}>{settings.label}</Link>
+
+<style>
+  .button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.625rem 1.125rem;
+    border: 1px solid var(--np-color-ink);
+    border-radius: calc(var(--np-radius) * 0.8);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.15s;
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+  .button--primary {
+    background: var(--np-color-ink);
+    color: var(--np-color-bg);
+  }
+  .button--secondary {
+    background: transparent;
+    color: var(--np-color-ink);
+  }
+</style>

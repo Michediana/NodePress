@@ -1,0 +1,20 @@
+---
+{ "inContent": false,
+  "label": "Header del sito",
+  "settings": {
+    "menu": { "type": "text", "label": "Posizione del menu", "default": "header" },
+    "showLanguages": { "type": "boolean", "label": "Selettore lingua", "default": true }
+  }
+}
+---
+<header class="site-header">
+  <div class="container site-header__inner">
+    <Link to={homeUrl()} class="site-header__brand">{site.siteName}</Link>
+    <div class="site-header__nav">
+      <nav aria-label="Menu principale" class="menu">
+        <MenuList items={menu(settings.menu)} />
+      </nav>
+      {settings.showLanguages && <LanguageSwitcher />}
+    </div>
+  </div>
+</header>

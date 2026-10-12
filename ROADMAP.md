@@ -144,10 +144,10 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 
 **Completata quando:** un frontend dev crea un tema nuovo da zero dal pannello e lo pubblica.
 
-#### 2.4 — Sezioni, token e composizione
+#### 2.4 — Sezioni, token e composizione ✅
 - Sezioni a file singolo con schema, slot, `<style>` con scope, `<script>`.
 - Template come alberi JSON di sezioni, gruppi globali header/footer.
-- Data binding e sorgenti dati del core (pagina, raccoglitori, menu, query).
+- Data binding e sorgenti dati del core (pagina, raccoglitori, menu, query); valori tradotti per lingua nei template JSON.
 - Override dei blocchi Tiptap e blocco "Sezione" nell'editor dei contenuti.
 
 **Completata quando:** una home con hero, griglia delle ultime notizie e call to action si compone solo con file del tema e JSON.

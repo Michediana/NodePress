@@ -2,7 +2,7 @@ import { Outlet } from "react-router";
 import { publicUrl, resolveLang } from "~/.server/front";
 import { getFrontMenus } from "~/.server/menus";
 import { getSettings } from "~/.server/settings";
-import { bundleFor, getFrontTheme, previewRedirect } from "~/.server/theme";
+import { bundleFor, getFrontTheme, previewRedirect, resolveBundleData } from "~/.server/theme";
 import { ConsentBanner, consentDefaultsScript } from "~/components/front/consent";
 import type { SiteData } from "~/components/front/site";
 import { consentTextsFor } from "~/lib/consent";
@@ -31,7 +31,9 @@ export async function loader({ request }: Route.LoaderArgs): Promise<SiteData> {
       css: theme.data.css,
       js: theme.data.js,
       assets: theme.data.assets,
-      notFound: theme.data.files["templates/404.np"] ? bundleFor(theme.data, "templates/404.np") : null,
+      notFound: theme.data.files["templates/404.np"]
+        ? await resolveBundleData(bundleFor(theme.data, "templates/404.np"), { lang, defaultLang })
+        : null,
       preview: theme.preview ? theme.name : null,
     },
   };

@@ -88,6 +88,51 @@ export async function loadMediaMap(ids: number[]): Promise<Record<number, MediaR
   return Object.fromEntries(rows.map((r) => [r.id, r]));
 }
 
+/**
+ * Elementi pubblicati di un raccoglitore nella lingua indicata, dal più recente,
+ * con l'immagine di copertina (OG o prima immagine del contenuto).
+ */
+export async function collectionItems(collectionId: number, lang: string, defaultLang: string, limit: number, offset = 0): Promise<ListingItem[]> {
+  const where = and(eq(nodes.parentId, collectionId), eq(nodes.type, "item"), eq(tr.lang, lang), visibleTranslation(new Date()));
+  const items = await db
+    .select({
+      id: nodes.id,
+      title: tr.title,
+      excerpt: tr.excerpt,
+      path: tr.path,
+      publishedAt: tr.publishedAt,
+      ogImageId: tr.ogImageId,
+      content: tr.content,
+    })
+    .from(tr)
+    .innerJoin(nodes, eq(nodes.id, tr.nodeId))
+    .where(where)
+    .orderBy(desc(tr.publishedAt), desc(nodes.id))
+    .limit(limit)
+    .offset(offset);
+  const imageIds = items.map((i) => i.ogImageId ?? mediaIdsOf(i.content)[0] ?? 0);
+  const itemMedia = await loadMediaMap(imageIds);
+  return items.map((item, index) => ({
+    id: item.id,
+    title: item.title,
+    excerpt: item.excerpt,
+    url: localizedUrl(item.path, lang, defaultLang),
+    publishedAt: item.publishedAt?.toISOString() ?? null,
+    image: itemMedia[imageIds[index]] ?? null,
+  }));
+}
+
+/** Id di un raccoglitore dato l'id o il percorso nella lingua di default (es. "/novita"). */
+export async function resolveCollectionId(ref: number | string, defaultLang: string) {
+  if (typeof ref === "number") return ref;
+  const [row] = await db
+    .select({ id: nodes.id })
+    .from(tr)
+    .innerJoin(nodes, eq(nodes.id, tr.nodeId))
+    .where(and(eq(tr.lang, defaultLang), eq(tr.path, ref.startsWith("/") ? ref : `/${ref}`), eq(nodes.type, "collection")));
+  return row?.id ?? null;
+}
+
 /** Percorsi degli antenati: "/a/b/c" → ["/a", "/a/b"]. */
 function ancestorPaths(path: string) {
   const parts = path.split("/").filter(Boolean);
@@ -170,37 +215,7 @@ export async function loadPage(request: Request): Promise<PageData> {
       .where(where);
     const pages = Math.max(1, Math.ceil(Number(total) / perPage));
     if (page > pages) throw new Response("Not found", { status: 404 });
-    const items = await db
-      .select({
-        id: nodes.id,
-        title: tr.title,
-        excerpt: tr.excerpt,
-        path: tr.path,
-        publishedAt: tr.publishedAt,
-        ogImageId: tr.ogImageId,
-        content: tr.content,
-      })
-      .from(tr)
-      .innerJoin(nodes, eq(nodes.id, tr.nodeId))
-      .where(where)
-      .orderBy(desc(tr.publishedAt), desc(nodes.id))
-      .limit(perPage)
-      .offset((page - 1) * perPage);
-    const imageIds = items.map((i) => i.ogImageId ?? mediaIdsOf(i.content)[0] ?? 0);
-    const itemMedia = await loadMediaMap(imageIds);
-    listing = {
-      page,
-      pages,
-      total: Number(total),
-      items: items.map((item, index) => ({
-        id: item.id,
-        title: item.title,
-        excerpt: item.excerpt,
-        url: localizedUrl(item.path, lang, defaultLang),
-        publishedAt: item.publishedAt?.toISOString() ?? null,
-        image: itemMedia[imageIds[index]] ?? null,
-      })),
-    };
+    listing = { page, pages, total: Number(total), items: await collectionItems(node.id, lang, defaultLang, perPage, (page - 1) * perPage) };
   }
 
   return {

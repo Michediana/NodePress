@@ -2,7 +2,18 @@ import { createElement, Fragment, isValidElement, type ReactNode } from "react";
 import { Link } from "react-router";
 import { LanguageFlag } from "~/components/language-flag";
 import type { MediaRef } from "~/lib/media";
+import type { ContentNode } from "~/lib/content";
+import { embedSrc } from "~/lib/embed";
 import { componentPath, FORBIDDEN_PROPS, type Attr, type Expr, type ThemeBundle } from "~/lib/theme/ast";
+import {
+  isBind,
+  isLocalized,
+  pickLocalized,
+  sectionPath,
+  type SectionNode,
+  type SectionSchema,
+  type SectionTree,
+} from "~/lib/theme/sections";
 import { isExternalUrl, safeUrl } from "~/lib/url";
 import { ConsentPreferencesLink } from "../consent";
 import { ContentRenderer } from "../content-renderer";
@@ -130,7 +141,19 @@ function evalAttrs(attrs: Attr[], scope: Scope, ctx: Ctx) {
 const str = (value: unknown) => (value === null || value === undefined ? undefined : String(value));
 
 /** Componenti del core: props in ingresso dal markup, `class` accettato come alias di `className`. */
-function renderCore(tag: string, props: Record<string, unknown>, children: ReactNode, ctx: Ctx): ReactNode {
+/** Media per id: prima quelli del contenuto della pagina, poi quelli delle impostazioni delle sezioni. */
+function mediaById(ctx: Ctx, id: unknown): MediaRef | null {
+  const key = Number(id);
+  return ctx.page?.media[key] ?? ctx.bundle.media[key] ?? null;
+}
+
+function renderCore(
+  tag: string,
+  props: Record<string, unknown>,
+  children: ReactNode,
+  scope: Scope,
+  ctx: Ctx,
+): ReactNode {
   const className = str(props.className ?? props.class);
   switch (tag) {
     case "Link": {
@@ -146,8 +169,8 @@ function renderCore(tag: string, props: Record<string, unknown>, children: React
       return createElement(Link, { ...extra, to, className, prefetch: "intent" }, children);
     }
     case "Image": {
-      const media = (typeof props.media === "number" ? ctx.page?.media[props.media] : props.media) as
-        MediaRef | undefined;
+      const media = (typeof props.media === "number" ? mediaById(ctx, props.media) : props.media) as
+        MediaRef | null | undefined;
       if (!media || typeof media !== "object" || !media.file) return null;
       return createElement(ResponsiveImage, {
         media,
@@ -163,7 +186,18 @@ function renderCore(tag: string, props: Record<string, unknown>, children: React
         doc: (props.doc ?? ctx.page?.translation.content ?? null) as never,
         media: (props.media ?? ctx.page?.media ?? {}) as Record<number, MediaRef>,
         lang: ctx.site.lang,
+        renderBlock: (node: ContentNode, blockChildren: ReactNode) => renderContentBlock(node, blockChildren, ctx),
       });
+    case "Slot": {
+      // Le sezioni annidate nello slot della sezione corrente.
+      const section = scope.section as { slots?: Record<string, SectionNode[]> } | undefined;
+      const nodes = section?.slots?.[String(props.name)] ?? [];
+      return nodes.map((node) => renderSection(node, ctx));
+    }
+    case "Group": {
+      const tree = ctx.bundle.trees[`groups/${String(props.name)}.json`];
+      return tree ? renderTree(tree, ctx) : null;
+    }
     case "LanguageFlag":
       return createElement(LanguageFlag, {
         code: String(props.code ?? ""),
@@ -183,7 +217,7 @@ function renderElement(expr: Extract<Expr, { k: "el" }>, scope: Scope, ctx: Ctx)
   // I figli statici vanno passati come argomenti separati, non come array: niente "key" richieste.
   const childNode = children.length ? createElement(Fragment, null, ...children) : null;
 
-  if (expr.kind === "core") return renderCore(expr.tag, props, childNode, ctx);
+  if (expr.kind === "core") return renderCore(expr.tag, props, childNode, scope, ctx);
 
   if (expr.kind === "theme") {
     const file = ctx.bundle.files[componentPath(expr.tag)];
@@ -263,7 +297,12 @@ function evaluate(expr: Expr, scope: Scope, ctx: Ctx): unknown {
       return Object.fromEntries(expr.props.map(([key, value]) => [key, evaluate(value, scope, ctx)]));
     case "filter": {
       const fn = filters[expr.name as keyof typeof filters];
-      return fn ? fn({ site: ctx.site, page: ctx.page }, ...expr.args.map((a) => evaluate(a, scope, ctx))) : undefined;
+      return fn
+        ? fn(
+            { site: ctx.site, page: ctx.page, media: (id) => mediaById(ctx, id) },
+            ...expr.args.map((a) => evaluate(a, scope, ctx)),
+          )
+        : undefined;
     }
     case "method":
       return callMethod(
@@ -284,7 +323,111 @@ function evaluate(expr: Expr, scope: Scope, ctx: Ctx): unknown {
   }
 }
 
-/** Renderizza un template del tema compilato. Funziona identico in SSR e nel browser. */
+// --- Sezioni ---
+
+/** Valore di un percorso puntato (`page.translation.title`) a partire dalle variabili globali. */
+function readPath(path: string, scope: Scope): unknown {
+  const [head, ...rest] = path.split(".");
+  return rest.reduce<unknown>((value, part) => getProp(value, part), scope[head]);
+}
+
+/**
+ * Impostazioni effettive di una sezione: default dello schema, poi i valori del template
+ * (fissi o legati a un dato della pagina), poi i dati calcolati sul server (es. "items").
+ */
+function resolveSettings(schema: SectionSchema, node: SectionNode, scope: Scope, ctx: Ctx) {
+  const settings: Record<string, unknown> = {};
+  const computed = ctx.bundle.data[node.id] ?? {};
+  for (const [key, def] of Object.entries(schema.settings)) {
+    let value = node.settings[key];
+    if (isBind(value)) value = readPath(value.bind, scope) ?? value.fallback ?? def.default;
+    if (value === undefined || value === null) value = def.default ?? null;
+    // Anche i default dello schema possono essere tradotti.
+    if (isLocalized(value)) value = pickLocalized(value, ctx.site.lang, ctx.site.defaultLang);
+    if (def.type === "items") value = computed[key] ?? [];
+    else if (def.type === "media" && typeof value === "number") value = mediaById(ctx, value);
+    settings[key] = value;
+  }
+  return settings;
+}
+
+function renderSection(node: SectionNode, ctx: Ctx): ReactNode {
+  const schema = ctx.bundle.schemas[node.type];
+  const file = ctx.bundle.files[sectionPath(node.type)];
+  if (!schema || !file || node.hidden || ctx.depth >= MAX_DEPTH) return null;
+  const base: Scope = { page: ctx.page, site: ctx.site, props: {}, children: null };
+  const scope: Scope = {
+    ...base,
+    settings: resolveSettings(schema, node, base, ctx),
+    section: { id: node.id, type: node.type, slots: node.slots },
+  };
+  // Il contenitore porta il tipo (per lo scope del CSS) e l'id (per l'editor visuale).
+  return createElement(
+    "div",
+    { key: node.id, "data-np-section": node.type, "data-np-id": node.id, style: { display: "contents" } },
+    toNode(evaluate(file.root, scope, { ...ctx, depth: ctx.depth + 1 })),
+  );
+}
+
+function renderTree(tree: SectionTree, ctx: Ctx): ReactNode {
+  const sections = tree.sections.map((node) => renderSection(node, ctx));
+  const layout = tree.layout ? ctx.bundle.files[componentPath(tree.layout)] : null;
+  if (!layout) return sections;
+  const children = createElement(Fragment, null, ...sections);
+  return toNode(
+    evaluate(layout.root, { page: ctx.page, site: ctx.site, props: {}, children }, { ...ctx, depth: ctx.depth + 1 }),
+  );
+}
+
+/** Props passate a `blocks/<tipo>.np` per ogni blocco del contenuto. */
+function blockProps(node: ContentNode, ctx: Ctx): Record<string, unknown> {
+  const attrs = node.attrs ?? {};
+  switch (node.type) {
+    case "heading":
+      return { level: Math.min(Math.max(Number(attrs.level) || 2, 2), 6) };
+    case "orderedList":
+      return { start: Number(attrs.start) || 1 };
+    case "image":
+      return {
+        media: mediaById(ctx, attrs.mediaId),
+        alt: String(attrs.alt ?? ""),
+        caption: String(attrs.caption ?? ""),
+      };
+    case "gallery":
+      return {
+        images: ((attrs.images as { mediaId: number }[]) ?? [])
+          .map((img) => mediaById(ctx, img.mediaId))
+          .filter(Boolean),
+      };
+    case "embed": {
+      const url = String(attrs.url ?? "");
+      return { url, src: embedSrc(url) };
+    }
+    default:
+      return {};
+  }
+}
+
+/**
+ * Aggancio del tema nel contenuto: i blocchi con un `blocks/<tipo>.np` usano quel markup,
+ * il blocco "Sezione" rende una sezione del tema. `undefined` = rendering standard.
+ */
+function renderContentBlock(node: ContentNode, children: ReactNode, ctx: Ctx): ReactNode | undefined {
+  if (node.type === "section") {
+    const attrs = node.attrs ?? {};
+    const settings =
+      attrs.settings && typeof attrs.settings === "object" ? (attrs.settings as Record<string, unknown>) : {};
+    // Le sezioni non pensate per il contenuto (es. header, "contenuto della pagina") non si rendono qui.
+    if (ctx.bundle.schemas[String(attrs.section ?? "")]?.inContent === false) return null;
+    return renderSection({ id: String(attrs.id ?? ""), type: String(attrs.section ?? ""), settings, slots: {} }, ctx);
+  }
+  const file = ctx.bundle.files[`blocks/${node.type}.np`];
+  if (!file) return undefined;
+  const scope: Scope = { page: ctx.page, site: ctx.site, props: blockProps(node, ctx), children };
+  return toNode(evaluate(file.root, scope, { ...ctx, depth: ctx.depth + 1 }));
+}
+
+/** Renderizza un template del tema compilato (markup `.np` o albero di sezioni). Identico in SSR e nel browser. */
 export function ThemeRenderer({
   bundle,
   page,
@@ -295,8 +438,10 @@ export function ThemeRenderer({
   props?: Record<string, unknown>;
 }) {
   const site = useSite();
+  const ctx: Ctx = { bundle, site, page, depth: 0 };
+  const tree = bundle.trees[bundle.entry];
+  if (tree) return <>{toNode(renderTree(tree, ctx))}</>;
   const entry = bundle.files[bundle.entry];
   if (!entry) return null;
-  const ctx: Ctx = { bundle, site, page, depth: 0 };
   return <>{toNode(evaluate(entry.root, { page, site, props, children: null }, ctx))}</>;
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `theme_builds` MODIFY COLUMN `data` longtext NOT NULL;

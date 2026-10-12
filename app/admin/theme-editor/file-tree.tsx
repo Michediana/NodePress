@@ -29,7 +29,7 @@ export type TreeFile = { path: string; size: number };
 type Folder = { name: string; path: string; folders: Folder[]; files: TreeFile[] };
 
 // Le cartelle convenzionali del tema vengono prima, nell'ordine in cui si usano.
-const FOLDER_ORDER = ["templates", "components", "styles", "scripts", "assets"];
+const FOLDER_ORDER = ["templates", "sections", "groups", "components", "blocks", "styles", "scripts", "assets"];
 
 function buildTree(files: TreeFile[]): Folder {
   const root: Folder = { name: "", path: "", folders: [], files: [] };

@@ -1,3 +1,6 @@
+import type { MediaRef } from "../media";
+import type { SectionSchema, SectionTree } from "./sections";
+
 // AST compilato dei file `.np` del tema: JSON puro, prodotto dal compilatore lato server
 // (`app/.server/theme/compile.ts`) e interpretato da `ThemeRenderer`, in SSR e in hydration.
 // Non contiene mai codice eseguibile: solo dati.
@@ -38,12 +41,23 @@ export type CompiledFile = {
   root: Expr;
   /** Componenti del tema usati direttamente da questo file (nomi PascalCase). */
   uses: string[];
+  /** Gruppi di sezioni inclusi con `<Group name="…" />`. */
+  groups: string[];
 };
 
-/** Insieme dei file necessari per rendere un template: il template e i componenti che usa. */
+/**
+ * Tutto ciò che serve per rendere un template: markup compilato, alberi di sezioni con i loro
+ * schemi e i dati risolti sul server (query delle sezioni e media delle impostazioni).
+ */
 export type ThemeBundle = {
+  /** File d'ingresso: `templates/<nome>.np` oppure `templates/<nome>.json`. */
   entry: string;
   files: Record<string, CompiledFile>;
+  trees: Record<string, SectionTree>;
+  schemas: Record<string, SectionSchema>;
+  /** Valori calcolati sul server, per id della sezione e nome dell'impostazione. */
+  data: Record<string, Record<string, unknown>>;
+  media: Record<number, MediaRef>;
 };
 
 /** Metodi ammessi su array e stringhe. */
@@ -85,10 +99,10 @@ export const FILTER_NAMES = [
 ] as const;
 
 /** Componenti React del core utilizzabili come tag nel markup. */
-export const CORE_COMPONENTS = ["Link", "Image", "Content", "LanguageFlag", "ConsentLink"] as const;
+export const CORE_COMPONENTS = ["Link", "Image", "Content", "LanguageFlag", "ConsentLink", "Slot", "Group"] as const;
 
 /** Variabili globali sempre disponibili nel markup. */
-export const GLOBALS = ["page", "site", "props", "children"] as const;
+export const GLOBALS = ["page", "site", "props", "children", "settings", "section"] as const;
 
 /** Proprietà mai accessibili, anche se presenti nei dati. */
 export const FORBIDDEN_PROPS = new Set(["__proto__", "prototype", "constructor"]);

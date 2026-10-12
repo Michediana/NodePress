@@ -3,7 +3,7 @@ import { nativeLanguageName } from "~/lib/languages";
 import type { MediaRef } from "~/lib/media";
 import type { SiteData, TemplatePage } from "../site";
 
-export type FilterContext = { site: SiteData; page: TemplatePage | null };
+export type FilterContext = { site: SiteData; page: TemplatePage | null; media: (id: unknown) => MediaRef | null };
 
 type Filter = (ctx: FilterContext, ...args: unknown[]) => unknown;
 
@@ -52,7 +52,7 @@ export const filters: Record<(typeof FILTER_NAMES)[number], Filter> = {
   homeUrl: ({ site }, lang) => homeUrl(site, lang ? String(lang) : undefined),
 
   /** Media referenziato nel contenuto della pagina, dato il suo id. */
-  media: ({ page }, id): MediaRef | null => page?.media[Number(id)] ?? null,
+  media: ({ media }, id): MediaRef | null => media(id),
 
   /** URL di un file statico del tema, es. `asset("assets/logo.svg")`. */
   asset: ({ site }, file) => site.theme.assets[String(file ?? "").replace(/^\.?\//, "")] ?? "",

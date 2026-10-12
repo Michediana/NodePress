@@ -1,0 +1,15 @@
+---
+{ "inContent": false, "label": "Contenuto della pagina", "description": "Il testo scritto nell'editor dei contenuti." }
+---
+{page && page.translation.content && (
+  <div class="prose page-content">
+    <Content />
+  </div>
+)}
+
+<style>
+  .page-content {
+    max-width: 48rem;
+    padding-bottom: 2rem;
+  }
+</style>

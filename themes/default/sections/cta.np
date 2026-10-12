@@ -1,0 +1,67 @@
+---
+{
+  "label": "Call to action",
+  "settings": {
+    "title": { "type": "text", "label": "Titolo" },
+    "text": { "type": "textarea", "label": "Testo" },
+    "tone": {
+      "type": "select",
+      "label": "Tono",
+      "default": "dark",
+      "options": [{ "value": "dark", "label": "Scuro" }, { "value": "light", "label": "Chiaro" }]
+    }
+  },
+  "slots": { "buttons": { "label": "Pulsanti", "accepts": ["button"] } }
+}
+---
+<section class="cta" data-tone={settings.tone}>
+  <div class="cta__text">
+    <h2 class="cta__title">{settings.title}</h2>
+    {settings.text && <p class="cta__body">{settings.text}</p>}
+  </div>
+  <div class="cta__buttons">
+    <Slot name="buttons" />
+  </div>
+</section>
+
+<style>
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-block: 3rem 5rem;
+    padding: 2.5rem;
+    border-radius: calc(var(--np-radius) * 1.6);
+    background: var(--np-color-subtle);
+
+    &[data-tone="dark"] {
+      background: var(--np-color-ink);
+      color: var(--np-color-bg);
+      & .cta__body {
+        opacity: 0.75;
+      }
+      /* I pulsanti dentro la CTA scura usano i colori invertiti. */
+      & .cta__buttons {
+        --np-color-ink: #fff;
+        --np-color-bg: oklch(0.145 0 0);
+      }
+    }
+  }
+  .cta__title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .cta__body {
+    max-width: 36rem;
+    margin: 0.5rem 0 0;
+  }
+  .cta__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+</style>

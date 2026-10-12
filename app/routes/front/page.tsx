@@ -1,7 +1,7 @@
 import { isRouteErrorResponse, Link } from "react-router";
 import { loadPage } from "~/.server/front";
 import { getSettings, getSiteUrl } from "~/.server/settings";
-import { getFrontTheme, templateBundle } from "~/.server/theme";
+import { getFrontTheme, resolveBundleData, templateBundle } from "~/.server/theme";
 import { useSite } from "~/components/front/site";
 import { ThemeRenderer } from "~/components/front/theme/renderer";
 import { mediaUrl } from "~/lib/media";
@@ -15,12 +15,16 @@ export async function loader({ request }: Route.LoaderArgs) {
     getSiteUrl(request),
     getFrontTheme(request),
   ]);
-  return {
-    ...page,
-    siteName,
-    siteUrl,
-    template: templateBundle(theme.data, page.node.template, kindOfNode(page.node.type)),
-  };
+  const contents = [page.translation.content];
+  const template = await resolveBundleData(
+    templateBundle(theme.data, page.node.template, kindOfNode(page.node.type), contents),
+    {
+      lang: page.lang,
+      defaultLang: page.defaultLang,
+      contents,
+    },
+  );
+  return { ...page, siteName, siteUrl, template };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

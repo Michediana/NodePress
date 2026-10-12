@@ -44,8 +44,12 @@ L'editor di Aspetto usa Monaco: albero dei file, schede, errori di compilazione 
 
 ```
 theme.json          nome, template per tipo di nodo, default, token di design
-templates/*.np      un file per template (+ 404.np per le pagine di errore)
+templates/*.np      template scritti a mano (+ 404.np per le pagine di errore)
+templates/*.json    template composti da sezioni (alternativa al .np)
+sections/*.np       sezioni: schema nel frontmatter, markup, <style> con scope, <script>
+groups/*.json       gruppi di sezioni condivisi (header, footer), inclusi con <Group name="…" />
 components/*.np     componenti riusabili: <PostCard item={item} /> → components/PostCard.np
+blocks/*.np         ridisegnano i blocchi del contenuto (blockquote, image, gallery…)
 styles/*.css        CSS scritto a mano, con nesting; finisce nel layer "theme"
 scripts/main.js     punto d'ingresso del JS (o main.ts), impacchettato con esbuild, solo browser
 assets/*            font, immagini, SVG: serviti con hash e cache immutabile
@@ -59,6 +63,34 @@ I file `.np` usano una sintassi JSX "senza JavaScript": tag HTML (con `class` e 
 - **Token:** dichiarati in `theme.json`, disponibili nel CSS come `var(--np-<nome>)`.
 - **CSS:** `url("../assets/font.woff2")` viene riscritto con l'URL dell'asset; gli `@import` esterni sono ammessi.
 - **JS:** import relativi tra file del tema o da URL `https://`; per l'interattività si usano i custom element.
+
+### Sezioni e template JSON
+
+Una sezione è un file `sections/<tipo>.np` con lo schema nel frontmatter:
+
+```
+---
+{
+  "label": "Hero",
+  "settings": {
+    "title": { "type": "text", "label": "Titolo" },
+    "items": { "type": "items", "default": { "collection": "/novita", "limit": 3 } }
+  },
+  "slots": { "actions": { "label": "Pulsanti", "accepts": ["button"] } }
+}
+---
+<section class="hero"><h1>{settings.title}</h1><Slot name="actions" /></section>
+
+<style>.hero { padding-block: 4rem; }</style>
+```
+
+- **Tipi di impostazione:** `text`, `textarea`, `number`, `boolean`, `select` (con `options`), `color`, `media` (id), `link`, `items` (elementi di un raccoglitore, letti sul server).
+- **Stile e script:** il CSS di `<style>` vale solo dentro la sezione (`:scope` indica il contenitore); lo `<script>` finisce nel bundle JS del tema.
+- **Template JSON:** `{ "layout": "Layout", "sections": [{ "type": "hero", "settings": {…}, "slots": {…} }] }`. Gli id mancanti si generano dalla posizione.
+- **Valori:** fissi (`"Titolo"`), tradotti (`{ "it": "Ciao", "en": "Hello" }`) o legati a un dato (`{ "bind": "page.translation.title" }`).
+- **Nel contenuto:** il blocco "Sezione" dell'editor inserisce una sezione del tema con le sue impostazioni (escluse quelle con `"inContent": false`).
+
+Nell'editor di Aspetto i template JSON, i gruppi e `theme.json` sono validati e completati in base alle sezioni del tema.
 
 Un admin può vedere la bozza di qualsiasi tema sul sito vero aprendo `/?np_preview=<tema>` (`?np_preview=off` per uscire; l'anteprima scade comunque dopo 30 minuti).
 

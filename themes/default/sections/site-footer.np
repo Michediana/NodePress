@@ -1,0 +1,19 @@
+---
+{ "inContent": false,
+  "label": "Footer del sito",
+  "settings": {
+    "menu": { "type": "text", "label": "Posizione del menu", "default": "footer" },
+    "note": { "type": "text", "label": "Testo (vuoto = © anno e nome del sito)" },
+    "showCookie": { "type": "boolean", "label": "Link alle preferenze cookie", "default": true }
+  }
+}
+---
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <span>{settings.note || `© ${year()} ${site.siteName}`}</span>
+    <nav aria-label="Menu footer" class="menu">
+      <MenuList items={menu(settings.menu)} />
+    </nav>
+    {settings.showCookie && <ConsentLink class="site-footer__link">Cookie</ConsentLink>}
+  </div>
+</footer>

@@ -1,4 +1,5 @@
 import type { CompiledFile } from "./ast";
+import type { SectionSchema, SectionTree } from "./sections";
 
 // Manifest del tema (`theme.json`) e dati di una build: condivisi tra server e pannello.
 
@@ -31,6 +32,10 @@ export type ThemeBuildData = {
   manifest: ThemeManifest;
   /** Markup compilato, per percorso (`templates/home.np`, `components/Card.np`…). */
   files: Record<string, CompiledFile>;
+  /** Schemi delle sezioni, per tipo. */
+  schemas: Record<string, SectionSchema>;
+  /** Alberi di sezioni: `templates/<nome>.json` e `groups/<nome>.json`. */
+  trees: Record<string, SectionTree>;
   /** URL del CSS e del JS compilati (null se il tema non ne ha). */
   css: string | null;
   js: string | null;

@@ -10,6 +10,9 @@ import { embedSrc } from "~/lib/embed";
 import { mediaUrl, type MediaRef } from "~/lib/media";
 import { cn } from "~/lib/utils";
 import { MediaPicker } from "./media-picker";
+import { SectionSettingsForm, type CollectionOption } from "~/admin/components/section-settings";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import type { SectionSchema } from "~/lib/theme/sections";
 
 export type GalleryImage = { mediaId: number; src: string };
 
@@ -20,6 +23,7 @@ declare module "@tiptap/core" {
       insertGallery: (images: GalleryImage[]) => ReturnType;
       insertEmbed: (url?: string) => ReturnType;
       insertHtml: (html?: string) => ReturnType;
+      insertSection: (type: string) => ReturnType;
     };
   }
 }
@@ -68,8 +72,16 @@ function ImageView({ node, updateAttributes, deleteNode, selected }: ReactNodeVi
           </div>
         )}
         <div className="grid gap-2 sm:grid-cols-2">
-          <Input placeholder={t("editor.caption")} value={caption ?? ""} onChange={(e) => updateAttributes({ caption: e.target.value })} />
-          <Input placeholder={t("editor.altOverride")} value={alt ?? ""} onChange={(e) => updateAttributes({ alt: e.target.value })} />
+          <Input
+            placeholder={t("editor.caption")}
+            value={caption ?? ""}
+            onChange={(e) => updateAttributes({ caption: e.target.value })}
+          />
+          <Input
+            placeholder={t("editor.altOverride")}
+            value={alt ?? ""}
+            onChange={(e) => updateAttributes({ alt: e.target.value })}
+          />
         </div>
         <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => setPicker(true)}>
           {t("editor.replaceImage")}
@@ -98,10 +110,23 @@ export const ImageBlock = Node.create({
     };
   },
   parseHTML() {
-    return [{ tag: "figure[data-type=image]" }, { tag: "img[src]", getAttrs: (el) => ({ src: (el as HTMLElement).getAttribute("src"), alt: (el as HTMLElement).getAttribute("alt") ?? "" }) }];
+    return [
+      { tag: "figure[data-type=image]" },
+      {
+        tag: "img[src]",
+        getAttrs: (el) => ({
+          src: (el as HTMLElement).getAttribute("src"),
+          alt: (el as HTMLElement).getAttribute("alt") ?? "",
+        }),
+      },
+    ];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["figure", { "data-type": "image" }, ["img", mergeAttributes({ src: HTMLAttributes.src, alt: HTMLAttributes.alt })]];
+    return [
+      "figure",
+      { "data-type": "image" },
+      ["img", mergeAttributes({ src: HTMLAttributes.src, alt: HTMLAttributes.alt })],
+    ];
   },
   addNodeView() {
     return ReactNodeViewRenderer(ImageView);
@@ -190,7 +215,11 @@ function EmbedView({ node, updateAttributes, deleteNode, selected }: ReactNodeVi
   return (
     <BlockFrame selected={selected} label={t("editor.embed")} onDelete={deleteNode}>
       <div className="flex flex-col gap-2">
-        <Input placeholder="https://www.youtube.com/watch?v=…" value={url} onChange={(e) => updateAttributes({ url: e.target.value })} />
+        <Input
+          placeholder="https://www.youtube.com/watch?v=…"
+          value={url}
+          onChange={(e) => updateAttributes({ url: e.target.value })}
+        />
         {url && (
           <p className="text-xs text-muted-foreground">{src ? t("editor.embedSupported") : t("editor.embedLink")}</p>
         )}
@@ -266,6 +295,102 @@ export const HtmlBlock = Node.create({
         (html = "") =>
         ({ commands }) =>
           commands.insertContent({ type: this.name, attrs: { html } }),
+    };
+  },
+});
+
+// --- Sezione del tema ---
+
+type SectionOptions = { schemas: SectionSchema[]; collections: CollectionOption[] };
+
+function SectionView({ node, updateAttributes, deleteNode, selected, extension }: ReactNodeViewProps) {
+  const { schemas, collections } = extension.options as SectionOptions;
+  const attrs = node.attrs as { section: string; settings: Record<string, unknown>; previews: Record<string, string> };
+  const schema = schemas.find((s) => s.name === attrs.section);
+  const items = schemas.map((s) => ({ value: s.name, label: s.label }));
+  return (
+    <BlockFrame
+      selected={selected}
+      label={schema ? `${t("editor.section")} · ${schema.label}` : t("editor.section")}
+      onDelete={deleteNode}
+    >
+      <div className="flex flex-col gap-4">
+        <Select
+          value={attrs.section}
+          // Cambiando tipo le impostazioni ripartono dai default del nuovo schema.
+          onValueChange={(next) => updateAttributes({ section: next, settings: {}, previews: {} })}
+          items={items}
+        >
+          <SelectTrigger className="w-full" aria-label={t("editor.sectionType")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        {schema ? (
+          <>
+            {schema.description && <p className="text-xs text-muted-foreground">{schema.description}</p>}
+            <SectionSettingsForm
+              schema={schema}
+              value={attrs.settings ?? {}}
+              onChange={(settings) => updateAttributes({ settings })}
+              collections={collections}
+              previews={attrs.previews ?? {}}
+              onPreviewsChange={(previews) => updateAttributes({ previews })}
+            />
+          </>
+        ) : (
+          <p className="text-sm text-destructive">{t("editor.sectionMissing", { type: attrs.section })}</p>
+        )}
+      </div>
+    </BlockFrame>
+  );
+}
+
+/** Blocco "Sezione": inserisce nel contenuto una sezione del tema attivo, con le sue impostazioni. */
+export const SectionBlock = Node.create<SectionOptions>({
+  name: "section",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addOptions() {
+    return { schemas: [], collections: [] };
+  },
+  addAttributes() {
+    return {
+      // Id stabile: collega i dati calcolati sul server (es. elementi di un raccoglitore).
+      id: { default: null },
+      section: { default: "" },
+      settings: { default: {} },
+      // Anteprime dei media per il pannello (id → URL); il front non le usa.
+      previews: { default: {} },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "div[data-type=section]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes({ "data-type": "section", "data-section": HTMLAttributes.section })];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(SectionView);
+  },
+  addCommands() {
+    return {
+      insertSection:
+        (type) =>
+        ({ commands }) =>
+          commands.insertContent({
+            type: this.name,
+            attrs: { id: `s-${Math.random().toString(36).slice(2, 10)}`, section: type, settings: {}, previews: {} },
+          }),
     };
   },
 });

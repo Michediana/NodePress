@@ -1,0 +1,5 @@
+<!-- Citazioni del contenuto ridisegnate dal tema. -->
+<blockquote class="quote">
+  <span class="quote__mark" aria-hidden="true">“</span>
+  {children}
+</blockquote>
