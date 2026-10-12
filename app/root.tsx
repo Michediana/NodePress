@@ -12,6 +12,12 @@ import type { Route } from "./+types/root";
 import { ensureMigrated } from "./.server/db";
 import "./app.css";
 
+export const links: Route.LinksFunction = () => [
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+];
+
 export const middleware: Route.MiddlewareFunction[] = [
   async () => {
     await ensureMigrated();
