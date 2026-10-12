@@ -1,34 +1,32 @@
-import { NavLink } from "react-router";
+import { Link, useLocation } from "react-router";
+import { ImageIcon, LanguagesIcon, MailIcon, SearchIcon, SettingsIcon, ActivityIcon } from "lucide-react";
 import { t } from "~/admin/i18n";
-import { cn } from "~/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 const links = [
-  { to: "/admin/settings", label: "settings.general", end: true },
-  { to: "/admin/settings/languages", label: "settings.languages" },
-  { to: "/admin/settings/media", label: "settings.media" },
-  { to: "/admin/settings/seo", label: "settings.seo" },
-  { to: "/admin/settings/tracking", label: "settings.tracking" },
-  { to: "/admin/settings/email", label: "settings.email" },
+  { to: "/admin/settings", label: "settings.general", icon: SettingsIcon },
+  { to: "/admin/settings/languages", label: "settings.languages", icon: LanguagesIcon },
+  { to: "/admin/settings/media", label: "settings.media", icon: ImageIcon },
+  { to: "/admin/settings/seo", label: "settings.seo", icon: SearchIcon },
+  { to: "/admin/settings/tracking", label: "settings.tracking", icon: ActivityIcon },
+  { to: "/admin/settings/email", label: "settings.email", icon: MailIcon },
 ];
 
 export function SettingsNav() {
+  const { pathname } = useLocation();
+  const current = pathname.replace(/\/+$/, "");
+  const active = links.find((link) => link.to === current)?.to ?? links[0].to;
+
   return (
-    <nav className="flex flex-wrap gap-1 border-b">
-      {links.map((link) => (
-        <NavLink
-          key={link.to}
-          to={link.to}
-          end={link.end}
-          className={({ isActive }) =>
-            cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
-              isActive ? "border-primary text-foreground" : "border-transparent",
-            )
-          }
-        >
-          {t(link.label)}
-        </NavLink>
-      ))}
-    </nav>
+    <Tabs value={active}>
+      <TabsList className="max-w-full overflow-x-auto">
+        {links.map(({ to, label, icon: Icon }) => (
+          <TabsTrigger key={to} value={to} render={<Link to={to} />} nativeButton={false}>
+            <Icon data-icon="inline-start" />
+            {t(label)}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

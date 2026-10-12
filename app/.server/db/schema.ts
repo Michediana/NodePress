@@ -147,19 +147,37 @@ export const redirects = mysqlTable("redirects", {
 
 // --- Media ---
 
-export const media = mysqlTable("media", {
-  id: int("id").autoincrement().primaryKey(),
-  file: varchar("file", { length: 255 }).notNull(),
-  originalName: varchar("original_name", { length: 255 }).notNull(),
-  mime: varchar("mime", { length: 128 }).notNull(),
-  size: int("size").notNull(),
-  width: int("width"),
-  height: int("height"),
-  variants: json("variants").$type<MediaVariant[]>().notNull(),
-  alt: json("alt").$type<Record<string, string>>().notNull(),
-  uploadedBy: int("uploaded_by").references(() => users.id, { onDelete: "set null" }),
-  createdAt: now(),
-});
+// Cartelle virtuali della libreria: organizzano i media senza spostare i file su disco.
+export const mediaFolders = mysqlTable(
+  "media_folders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    parentId: int("parent_id").references((): AnyMySqlColumn => mediaFolders.id, { onDelete: "cascade" }),
+    createdBy: int("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: now(),
+  },
+  (t) => [index("media_folders_parent_idx").on(t.parentId)],
+);
+
+export const media = mysqlTable(
+  "media",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    folderId: int("folder_id").references(() => mediaFolders.id, { onDelete: "set null" }),
+    file: varchar("file", { length: 255 }).notNull(),
+    originalName: varchar("original_name", { length: 255 }).notNull(),
+    mime: varchar("mime", { length: 128 }).notNull(),
+    size: int("size").notNull(),
+    width: int("width"),
+    height: int("height"),
+    variants: json("variants").$type<MediaVariant[]>().notNull(),
+    alt: json("alt").$type<Record<string, string>>().notNull(),
+    uploadedBy: int("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: now(),
+  },
+  (t) => [index("media_folder_idx").on(t.folderId)],
+);
 
 // --- Menu ---
 
@@ -234,6 +252,7 @@ export type Role = User["role"];
 export type Node = typeof nodes.$inferSelect;
 export type NodeTranslation = typeof nodeTranslations.$inferSelect;
 export type Media = typeof media.$inferSelect;
+export type MediaFolder = typeof mediaFolders.$inferSelect;
 export type Menu = typeof menus.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type Redirect = typeof redirects.$inferSelect;

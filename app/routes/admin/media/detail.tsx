@@ -34,7 +34,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (form.get("intent") === "delete") {
       if (!can(user.role, "media") && media.uploadedBy !== user.id) throw new UserError(t("errors.forbidden"), 403);
       await deleteMedia(media.id);
-      throw redirect("/admin/media");
+      throw redirect(media.folderId ? `/admin/media?folder=${media.folderId}` : "/admin/media");
     }
     const { codes } = await getSiteLanguages();
     const alt: Record<string, string> = { ...media.alt };
@@ -58,7 +58,7 @@ export default function MediaDetail({ loaderData, actionData }: Route.ComponentP
         title={media.originalName}
         actions={
           <>
-            <Button variant="outline" nativeButton={false} render={<Link to="/admin/media" />}>
+            <Button variant="outline" nativeButton={false} render={<Link to={media.folderId ? `/admin/media?folder=${media.folderId}` : "/admin/media"} />}>
               <ArrowLeftIcon data-icon="inline-start" />
               {t("common.back")}
             </Button>
