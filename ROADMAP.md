@@ -82,14 +82,14 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 
 ## Fasi
 
-### Fase 0 — Fondamenta
+### Fase 0 — Fondamenta ✅
 - Schema DB + migrazioni Drizzle, configurazione, setup wizard.
 - Autenticazione, sessioni, ruoli; layout `/admin` con shadcn.
 - Gestione lingue (attive/default) e routing con prefisso lingua.
 
 **Completata quando:** dopo il setup un admin fa login, attiva una seconda lingua e vede il pannello vuoto.
 
-### Fase 1 — MVP
+### Fase 1 — MVP ✅
 - Albero delle rotte (pagine e raccoglitori), contenuti tradotti, editor Tiptap, stati e programmazione.
 - Template React e rendering SSR del front, con paginazione, `hreflang` e selettore lingua.
 - Media library con conversione, ridimensionamento e `srcset`.
