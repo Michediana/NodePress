@@ -80,8 +80,8 @@ function SettingField({
     return (
       <Field>
         <FieldLabel>{label}</FieldLabel>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="font-mono">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Badge variant="secondary" className="h-auto max-w-full font-mono break-all whitespace-normal">
             <LinkIcon />
             {t("sectionSettings.bound", { path: value.bind })}
           </Badge>

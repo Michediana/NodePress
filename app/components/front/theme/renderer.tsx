@@ -13,6 +13,9 @@ import {
   type SectionNode,
   type SectionSchema,
   type SectionTree,
+  BREAKPOINTS,
+  isResponsive,
+  type ResponsiveValue,
 } from "~/lib/theme/sections";
 import { isExternalUrl, safeUrl } from "~/lib/url";
 import { ConsentPreferencesLink } from "../consent";
@@ -331,40 +334,100 @@ function readPath(path: string, scope: Scope): unknown {
   return rest.reduce<unknown>((value, part) => getProp(value, part), scope[head]);
 }
 
+/** Valore effettivo di un'impostazione: binding, default, traduzioni, dati del server, media. */
+function settingValue(
+  key: string,
+  def: SectionSchema["settings"][string],
+  raw: unknown,
+  scope: Scope,
+  ctx: Ctx,
+  computed: Record<string, unknown>,
+) {
+  let value = raw;
+  if (isBind(value)) value = readPath(value.bind, scope) ?? value.fallback ?? def.default;
+  if (value === undefined || value === null) value = def.default ?? null;
+  // Anche i default dello schema possono essere tradotti.
+  if (isLocalized(value)) value = pickLocalized(value, ctx.site.lang, ctx.site.defaultLang);
+  if (def.type === "items") return computed[key] ?? [];
+  if (def.type === "media" && typeof value === "number") return mediaById(ctx, value);
+  return value;
+}
+
 /**
  * Impostazioni effettive di una sezione: default dello schema, poi i valori del template
  * (fissi o legati a un dato della pagina), poi i dati calcolati sul server (es. "items").
+ * Le impostazioni "responsive" diventano anche variabili CSS per breakpoint.
  */
 function resolveSettings(schema: SectionSchema, node: SectionNode, scope: Scope, ctx: Ctx) {
   const settings: Record<string, unknown> = {};
+  const vars: Record<string, Partial<Record<"base" | keyof typeof BREAKPOINTS, string>>> = {};
   const computed = ctx.bundle.data[node.id] ?? {};
   for (const [key, def] of Object.entries(schema.settings)) {
-    let value = node.settings[key];
-    if (isBind(value)) value = readPath(value.bind, scope) ?? value.fallback ?? def.default;
-    if (value === undefined || value === null) value = def.default ?? null;
-    // Anche i default dello schema possono essere tradotti.
-    if (isLocalized(value)) value = pickLocalized(value, ctx.site.lang, ctx.site.defaultLang);
-    if (def.type === "items") value = computed[key] ?? [];
-    else if (def.type === "media" && typeof value === "number") value = mediaById(ctx, value);
-    settings[key] = value;
+    const raw = node.settings[key];
+    if (def.responsive) {
+      // Il default dello schema può essere a sua volta per breakpoint.
+      const source = raw === undefined ? def.default : raw;
+      const byBreakpoint: ResponsiveValue = isResponsive(source) ? source : { base: raw };
+      const baseDef = isResponsive(def.default) ? { ...def, default: def.default.base } : def;
+      settings[key] = settingValue(key, baseDef, byBreakpoint.base, scope, ctx, computed);
+      vars[key] = { base: cssVar(settings[key]) };
+      for (const bp of Object.keys(BREAKPOINTS) as (keyof typeof BREAKPOINTS)[]) {
+        if (byBreakpoint[bp] !== undefined && byBreakpoint[bp] !== null)
+          vars[key][bp] = cssVar(settingValue(key, baseDef, byBreakpoint[bp], scope, ctx, computed));
+      }
+    } else {
+      settings[key] = settingValue(key, def, raw, scope, ctx, computed);
+    }
   }
-  return settings;
+  return { settings, vars };
+}
+
+/** Valore sicuro per una custom property (solo testi e numeri, niente che esca dalla dichiarazione). */
+function cssVar(value: unknown) {
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
+  return String(value).replace(/[{};<>]/g, "");
+}
+
+/** Visibilità per lingua e per date; quella per dispositivo è CSS (data-np-hide). */
+function isVisible(node: SectionNode, ctx: Ctx) {
+  const visibility = node.visibility;
+  if (!visibility) return true;
+  if (visibility.langs?.length && !visibility.langs.includes(ctx.site.lang)) return false;
+  const now = Date.now();
+  if (visibility.from && now < Date.parse(visibility.from)) return false;
+  if (visibility.until && now > Date.parse(visibility.until)) return false;
+  return true;
 }
 
 function renderSection(node: SectionNode, ctx: Ctx): ReactNode {
   const schema = ctx.bundle.schemas[node.type];
   const file = ctx.bundle.files[sectionPath(node.type)];
-  if (!schema || !file || node.hidden || ctx.depth >= MAX_DEPTH) return null;
+  if (!schema || !file || node.hidden || ctx.depth >= MAX_DEPTH || !isVisible(node, ctx)) return null;
   const base: Scope = { page: ctx.page, site: ctx.site, props: {}, children: null };
-  const scope: Scope = {
-    ...base,
-    settings: resolveSettings(schema, node, base, ctx),
-    section: { id: node.id, type: node.type, slots: node.slots },
-  };
+  const { settings, vars } = resolveSettings(schema, node, base, ctx);
+  const scope: Scope = { ...base, settings, section: { id: node.id, type: node.type, slots: node.slots } };
+
+  // Valori responsive in un <style> della sezione: la base, poi i breakpoint in media query.
+  // (Non nello stile inline: vincerebbe sulle media query.)
+  const style = { display: "contents" };
+  const selector = `[data-np-id="${node.id}"]`;
+  const baseVars = Object.entries(vars)
+    .filter(([, values]) => values.base !== undefined)
+    .map(([key, values]) => `--s-${key}:${values.base}`);
+  const queries: string[] = baseVars.length ? [`${selector}{${baseVars.join(";")}}`] : [];
+  for (const [key, values] of Object.entries(vars)) {
+    for (const [bp, width] of Object.entries(BREAKPOINTS)) {
+      const value = values[bp as keyof typeof BREAKPOINTS];
+      if (value !== undefined) queries.push(`@media (min-width:${width}px){${selector}{--s-${key}:${value}}}`);
+    }
+  }
+  const hideOn = node.visibility?.hideOn?.length ? node.visibility.hideOn.join(" ") : undefined;
+
   // Il contenitore porta il tipo (per lo scope del CSS) e l'id (per l'editor visuale).
   return createElement(
     "div",
-    { key: node.id, "data-np-section": node.type, "data-np-id": node.id, style: { display: "contents" } },
+    { key: node.id, "data-np-section": node.type, "data-np-id": node.id, "data-np-hide": hideOn, style },
+    queries.length ? createElement("style", null, queries.join("")) : null,
     toNode(evaluate(file.root, scope, { ...ctx, depth: ctx.depth + 1 })),
   );
 }

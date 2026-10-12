@@ -31,6 +31,7 @@ export default [
       index("routes/admin/appearance/list.tsx"),
       route(":name", "routes/admin/appearance/editor.tsx"),
       route(":name/api", "routes/admin/appearance/api.ts"),
+      route(":name/customize", "routes/admin/appearance/customize.tsx"),
     ]),
         ...prefix("settings", [
           index("routes/admin/settings/general.tsx"),

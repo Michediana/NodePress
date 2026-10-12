@@ -11,7 +11,7 @@ import {
   type ThemeBuildData,
   type ThemeManifest,
 } from "~/lib/theme/manifest";
-import { OVERRIDABLE_BLOCKS, type SectionSchema, type SectionTree } from "~/lib/theme/sections";
+import { OVERRIDABLE_BLOCKS, walkSections, type SectionSchema, type SectionTree } from "~/lib/theme/sections";
 import { compileMarkup, ThemeCompileError, type EmbeddedBlock } from "./compile";
 import { parseSectionSchema, parseTree } from "./sections";
 
@@ -108,26 +108,54 @@ export function parseManifest(source: string): ThemeManifest {
 }
 
 /** Custom properties dei token, con i valori di default. */
-function tokensCss(manifest: ThemeManifest) {
+/** Valore CSS sicuro dentro una dichiarazione: niente graffe, punti e virgola o chiusure di tag. */
+export const cssValue = (value: string) => value.replace(/[{};<>]/g, "").trim();
+
+/** Custom properties dei token: default di theme.json, sostituiti dai valori di config/tokens.json. */
+function tokensCss(manifest: ThemeManifest, values: Record<string, string>) {
   const entries = Object.entries(manifest.tokens ?? {});
   if (!entries.length) return "";
-  // Il valore viene da theme.json: niente graffe o punti e virgola che uscirebbero dalla dichiarazione.
-  const decls = entries.map(([name, token]) => `--np-${name}:${token.default.replace(/[{};]/g, "")}`);
+  const decls = entries.map(([name, token]) => `--np-${name}:${cssValue(values[name] ?? token.default)}`);
   return `:root{${decls.join(";")}}`;
 }
 
-/** Selettore `[data-np-section="<tipo>"]` nel formato dei visitor di lightningcss. */
-const sectionAttr = (type: string) => ({
+/** Valori dei token scelti nell'editor visuale (config/tokens.json). */
+function parseTokenValues(sources: ThemeSources, manifest: ThemeManifest): Record<string, string> {
+  const file = "config/tokens.json";
+  if (!sources.has(file)) return {};
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text(sources, file));
+  } catch (error) {
+    throw new ThemeCompileError(`JSON non valido: ${(error as Error).message}`, file, 1, 1);
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    throw new ThemeCompileError("Atteso un oggetto { token: valore }.", file, 1, 1);
+  const values: Record<string, string> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (!manifest.tokens?.[name])
+      throw new ThemeCompileError(`Token "${name}" non dichiarato in theme.json.`, file, 1, 1);
+    if (typeof value !== "string") throw new ThemeCompileError(`Token "${name}": atteso un testo.`, file, 1, 1);
+    values[name] = value;
+  }
+  return values;
+}
+
+/** Limite dei selettori: il tipo di sezione (stili del tema) o l'id dell'istanza (override). */
+type CssScope = { attr: "data-np-section" | "data-np-id"; value: string };
+
+/** Selettore `[attr="valore"]` nel formato dei visitor di lightningcss. */
+const scopeAttr = ({ attr, value }: CssScope) => ({
   type: "attribute" as const,
-  name: "data-np-section",
-  operation: { operator: "equal" as const, value: type, caseSensitivity: "case-sensitive" as const },
+  name: attr,
+  operation: { operator: "equal" as const, value, caseSensitivity: "case-sensitive" as const },
 });
 
 /**
- * Compila un foglio di stile. Con `scope` (il tipo di una sezione) ogni selettore viene limitato
- * alla sezione: `.hero` → `[data-np-section="hero"] .hero`, `:scope` → il contenitore stesso.
+ * Compila un foglio di stile. Con `scope` ogni selettore viene limitato alla sezione:
+ * `.hero` → `[data-np-section="hero"] .hero`, `:scope` → il contenitore stesso.
  */
-function compileCss(file: string, source: string, resolveUrl: (url: string) => string | null, scope?: string) {
+function compileCss(file: string, source: string, resolveUrl: (url: string) => string | null, scope?: CssScope) {
   const imports: string[] = [];
   const body = source.replace(/@import\s[^;]+;/g, (rule) => {
     imports.push(rule.replace(/;$/, "").trim());
@@ -147,7 +175,7 @@ function compileCss(file: string, source: string, resolveUrl: (url: string) => s
               Selector(selector) {
                 // Le regole annidate (&) ereditano lo scope dalla regola che le contiene.
                 if (selector.some((c) => c.type === "nesting")) return selector;
-                const attr = sectionAttr(scope);
+                const attr = scopeAttr(scope);
                 const first = selector[0];
                 if (first?.type === "pseudo-class" && first.kind === "scope") return [attr, ...selector.slice(1)];
                 return [attr, { type: "combinator", value: "descendant" }, ...selector];
@@ -373,14 +401,49 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
       const target = path.posix.normalize(path.posix.join("sections", url.replace(/[?#].*$/, "")));
       return assetUrls[target] ?? null;
     };
-    const result = compileCss(file, "\n".repeat(block.line - 1) + block.content, resolveUrl, type);
+    const result = compileCss(file, "\n".repeat(block.line - 1) + block.content, resolveUrl, {
+      attr: "data-np-section",
+      value: type,
+    });
     imports.push(...result.imports.map((rule) => (/\blayer\b/.test(rule) ? rule : `${rule} layer(theme)`) + ";"));
     styles.push(result.css);
   }
+  // Override dell'editor visuale: CSS globale (config/custom.css) e CSS delle singole istanze.
+  // Stanno nel layer np.overrides, che vince su tutto il CSS del tema.
+  const overrides: string[] = [];
+  const resolveRoot = (url: string) => {
+    if (/^(https?:|data:|#|\/)/i.test(url)) return url;
+    return assetUrls[path.posix.normalize(url.replace(/^\.\//, "").replace(/[?#].*$/, ""))] ?? null;
+  };
+  if (sources.has("config/custom.css")) {
+    const result = compileCss("config/custom.css", text(sources, "config/custom.css"), (url) =>
+      resolveRoot(url.replace(/^\.\.\//, "")),
+    );
+    imports.push(
+      ...result.imports.map((rule) => (/\blayer\b/.test(rule) ? rule : `${rule} layer(np.overrides)`) + ";"),
+    );
+    overrides.push(result.css);
+  }
+  for (const [file, tree] of Object.entries(trees)) {
+    walkSections(tree.sections, (node) => {
+      if (!node.css) return;
+      try {
+        overrides.push(compileCss(file, node.css, resolveRoot, { attr: "data-np-id", value: node.id }).css);
+      } catch (error) {
+        // Il CSS sta dentro il JSON: la riga del file non servirebbe, conta la sezione.
+        const e = error as ThemeCompileError;
+        throw new ThemeCompileError(`CSS della sezione "${node.id}": ${e.message.replace(/^.*? — /, "")}`, file, 1, 1);
+      }
+    });
+  }
+
   let css: string | null = null;
-  const tokens = tokensCss(manifest);
-  if (styles.length || tokens) {
-    const content = Buffer.from(`${LAYER_ORDER}${imports.join("")}@layer theme{${tokens}${styles.join("")}}`);
+  const tokens = tokensCss(manifest, parseTokenValues(sources, manifest));
+  if (styles.length || tokens || overrides.length) {
+    const overrideLayer = overrides.length ? `@layer np.overrides{${overrides.join("")}}` : "";
+    const content = Buffer.from(
+      `${LAYER_ORDER}${imports.join("")}@layer theme{${tokens}${styles.join("")}}${overrideLayer}`,
+    );
     const hash = hashOf(content);
     assets.push({ hash, mime: "text/css; charset=utf-8", content });
     css = assetUrl(hash, ".css");
@@ -427,7 +490,11 @@ export async function lintThemeFile(file: string, source: string): Promise<Theme
       const { meta, style, script } = compileMarkup(file, source);
       if (file.startsWith("sections/")) {
         const schema = parseSectionSchema(file, meta);
-        if (style) compileCss(file, "\n".repeat(style.line - 1) + style.content, (url) => url, schema.name);
+        if (style)
+          compileCss(file, "\n".repeat(style.line - 1) + style.content, (url) => url, {
+            attr: "data-np-section",
+            value: schema.name,
+          });
         if (script) {
           try {
             await esbuild.transform("\n".repeat(script.line - 1) + script.content, {

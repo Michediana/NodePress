@@ -41,6 +41,23 @@
 }
 
 @layer np.core {
+  /* Sezioni nascoste per dispositivo (visibilità dell'editor visuale). */
+  @media (max-width: 767.98px) {
+    [data-np-hide~="mobile"] {
+      display: none !important;
+    }
+  }
+  @media (min-width: 768px) and (max-width: 1023.98px) {
+    [data-np-hide~="tablet"] {
+      display: none !important;
+    }
+  }
+  @media (min-width: 1024px) {
+    [data-np-hide~="desktop"] {
+      display: none !important;
+    }
+  }
+
   .np-gallery {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

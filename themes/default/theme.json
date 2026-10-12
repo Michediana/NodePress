@@ -16,7 +16,8 @@
     "color-muted": { "type": "color", "label": "Testo secondario", "group": "Colori", "default": "oklch(0.556 0 0)" },
     "color-subtle": { "type": "color", "label": "Superfici", "group": "Colori", "default": "oklch(0.97 0 0)" },
     "color-border": { "type": "color", "label": "Bordi", "group": "Colori", "default": "oklch(0.922 0 0)" },
-    "font-sans": { "type": "font", "label": "Font", "group": "Tipografia", "default": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif" },
+    "font-sans": { "type": "font", "label": "Font del testo", "group": "Tipografia", "default": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif" },
+    "font-heading": { "type": "font", "label": "Font dei titoli", "group": "Tipografia", "default": "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif" },
     "container": { "type": "size", "label": "Larghezza contenuto", "group": "Layout", "default": "64rem" },
     "radius": { "type": "size", "label": "Raggio degli angoli", "group": "Layout", "default": "0.625rem" }
   }

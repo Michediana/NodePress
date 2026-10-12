@@ -1,4 +1,12 @@
-import { ArrowLeftIcon, CircleAlertIcon, FilePlusIcon, SaveIcon, UploadIcon, XIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  PaintbrushIcon,
+  CircleAlertIcon,
+  FilePlusIcon,
+  SaveIcon,
+  UploadIcon,
+  XIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useBeforeUnload, useBlocker, useRevalidator } from "react-router";
 import { toast } from "sonner";
@@ -268,6 +276,15 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
         )}
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-xs text-muted-foreground lg:inline">{t("appearance.editor.shortcuts")}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            nativeButton={false}
+            render={<Link to={`/admin/appearance/${theme.name}/customize`} />}
+          >
+            <PaintbrushIcon data-icon="inline-start" />
+            {t("visual.open")}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => save()} disabled={!active || !dirty[active] || saving}>
             {saving ? <Spinner data-icon="inline-start" /> : <SaveIcon data-icon="inline-start" />}
             {saving ? t("appearance.editor.saving") : t("appearance.editor.save")}

@@ -152,10 +152,11 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 
 **Completata quando:** una home con hero, griglia delle ultime notizie e call to action si compone solo con file del tema e JSON.
 
-#### 2.5 — Editor visuale
-- Anteprima del front SSR in iframe con aggiornamenti live via `postMessage` (token istantanei, revalidation per i cambi strutturali).
+#### 2.5 — Editor visuale ✅
+- Anteprima del front SSR in iframe senza script, collegata dal pannello (stessa origine): token istantanei, salvataggio automatico e ricarica a doppio buffer per i cambi strutturali.
 - Albero delle sezioni con drag & drop, selezione dall'anteprima, inspector generato dallo schema.
-- Valori per breakpoint, visibilità condizionale, viewport, annulla/ripeti, bozza → pubblica con storico.
+- Valori per breakpoint (impostazioni `"responsive"` → variabili CSS `--s-<nome>`), visibilità per dispositivo, lingua e date, viewport, annulla/ripeti, bozza → pubblica con storico e ripristino.
+- Le modifiche sono file del tema: template e gruppi JSON, `config/tokens.json`, `config/custom.css`.
 - CSS di override globale e per istanza (Monaco).
 
 **Completata quando:** un utente senza codice cambia colori, font e layout della home e pubblica.

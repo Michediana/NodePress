@@ -1,5 +1,6 @@
 import {
   CodeIcon,
+  PaintbrushIcon,
   CopyIcon,
   DownloadIcon,
   EllipsisIcon,
@@ -228,7 +229,16 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
               )}
             </CardContent>
             <CardFooter className="flex flex-wrap gap-2">
-              <Button size="sm" nativeButton={false} render={<Link to={`/admin/appearance/${theme.name}`} />}>
+              <Button size="sm" nativeButton={false} render={<Link to={`/admin/appearance/${theme.name}/customize`} />}>
+                <PaintbrushIcon data-icon="inline-start" />
+                {t("visual.open")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                nativeButton={false}
+                render={<Link to={`/admin/appearance/${theme.name}`} />}
+              >
                 <CodeIcon data-icon="inline-start" />
                 {t("appearance.edit")}
               </Button>

@@ -6,6 +6,18 @@
     "title": { "type": "text", "label": "Titolo" },
     "lead": { "type": "textarea", "label": "Testo" },
     "image": { "type": "media", "label": "Immagine" },
+    "spacing": {
+      "type": "select",
+      "label": "Spazio verticale",
+      "responsive": true,
+      "default": { "base": "3rem", "desktop": "5rem" },
+      "options": [
+        { "value": "2rem", "label": "Compatto" },
+        { "value": "3rem", "label": "Normale" },
+        { "value": "5rem", "label": "Ampio" },
+        { "value": "8rem", "label": "Molto ampio" }
+      ]
+    },
     "align": {
       "type": "select",
       "label": "Allineamento",
@@ -32,7 +44,7 @@
     display: grid;
     gap: 2rem;
     align-items: center;
-    padding-block: 5rem 3rem;
+    padding-block: var(--s-spacing, 5rem) 3rem;
 
     &:has(.hero__image) {
       @media (min-width: 1024px) {

@@ -92,6 +92,22 @@ Una sezione è un file `sections/<tipo>.np` con lo schema nel frontmatter:
 
 Nell'editor di Aspetto i template JSON, i gruppi e `theme.json` sono validati e completati in base alle sezioni del tema.
 
+### Editor visuale
+
+**Aspetto → Personalizza** (`/admin/appearance/<tema>/customize`) compone i template JSON senza scrivere codice: albero delle sezioni con trascinamento e slot, selezione cliccando nell'anteprima, inspector generato dallo schema, token (colori, font, misure) applicati all'istante, CSS globale e per singola sezione, viewport mobile/tablet/desktop, annulla/ripeti, pubblicazione con storico delle versioni.
+
+Le modifiche si salvano da sole nella bozza come file del tema, quindi restano modificabili anche dall'editor del codice:
+
+- template e gruppi: `templates/*.json`, `groups/*.json`;
+- token: `config/tokens.json` (sostituisce i default di `theme.json`);
+- CSS globale: `config/custom.css`, nel layer `np.overrides` che vince sul CSS del tema.
+
+Per ogni sezione si possono impostare anche:
+
+- **valori per breakpoint** sulle impostazioni dichiarate `"responsive": true` (`{ "base": …, "tablet": …, "desktop": … }`, da 768 e 1024 px), che il CSS della sezione legge con `var(--s-<nome>)`;
+- **visibilità**: `"visibility": { "hideOn": ["mobile"], "langs": ["it"], "from": "…", "until": "…" }`;
+- **CSS dell'istanza**: `"css": ":scope { … }"`, limitato a quella sezione.
+
 Un admin può vedere la bozza di qualsiasi tema sul sito vero aprendo `/?np_preview=<tema>` (`?np_preview=off` per uscire; l'anteprima scade comunque dopo 30 minuti).
 
 ## API REST

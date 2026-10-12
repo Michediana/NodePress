@@ -5,6 +5,7 @@ import { unzipSync, zipSync } from "fflate";
 import { db, schema } from "../db";
 import type { ThemeBuildError } from "../db/schema";
 import { UserError } from "../forms";
+import { visibleTranslation } from "../nodes";
 import { getSetting, setSettings } from "../settings";
 import { buildTheme, normalizeThemePath, parseManifest, type ThemeSources } from "./build";
 import { ThemeCompileError } from "./compile";
@@ -373,4 +374,17 @@ export async function ensureActiveTheme() {
   const installed = await findTheme(name);
   if (!installed?.publishedBuildId) throw new Error(`Il tema attivo "${name}" non ha una build pubblicata.`);
   return installed;
+}
+
+/** Percorso di una pagina pubblicata che usa il template, per mostrarla nell'editor visuale. */
+export async function samplePathForTemplate(template: string, defaultLang: string) {
+  const { nodes, nodeTranslations: tr } = schema;
+  const [row] = await db
+    .select({ path: tr.path })
+    .from(tr)
+    .innerJoin(nodes, eq(nodes.id, tr.nodeId))
+    .where(and(eq(nodes.template, template), eq(tr.lang, defaultLang), visibleTranslation()))
+    .orderBy(nodes.id)
+    .limit(1);
+  return row?.path ?? null;
 }

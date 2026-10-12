@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   isBind,
   isLocalized,
+  isResponsive,
+  type Visibility,
   SETTING_TYPES,
   type SectionNode,
   type SectionSchema,
@@ -25,6 +27,7 @@ const settingSchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   placeholder: z.string().optional(),
+  responsive: z.boolean().optional(),
 });
 
 const slotSchema = z.object({ label: z.string().optional(), accepts: z.array(z.string()).optional() });
@@ -67,6 +70,13 @@ export function parseSectionSchema(file: string, meta: unknown): SectionSchema {
   return { name, label: data.label ?? name, description: data.description, settings, slots, inContent: data.inContent };
 }
 
+const visibilitySchema = z.object({
+  hideOn: z.array(z.enum(["mobile", "tablet", "desktop"])).optional(),
+  langs: z.array(z.string()).optional(),
+  from: z.string().datetime({ offset: true, local: true }).optional(),
+  until: z.string().datetime({ offset: true, local: true }).optional(),
+});
+
 const nodeSchema: z.ZodType<RawNode> = z.lazy(() =>
   z.object({
     id: z
@@ -77,6 +87,8 @@ const nodeSchema: z.ZodType<RawNode> = z.lazy(() =>
     settings: z.record(z.string(), z.unknown()).default({}),
     slots: z.record(z.string(), z.array(nodeSchema)).default({}),
     hidden: z.boolean().optional(),
+    visibility: visibilitySchema.optional(),
+    css: z.string().max(100_000).optional(),
   }),
 );
 
@@ -86,6 +98,8 @@ type RawNode = {
   settings: Record<string, unknown>;
   slots: Record<string, RawNode[]>;
   hidden?: boolean;
+  visibility?: Visibility;
+  css?: string;
 };
 
 const treeSchema = z.object({
@@ -96,6 +110,12 @@ const treeSchema = z.object({
 /** Controlla il tipo di un valore letterale rispetto alla definizione dell'impostazione. */
 function checkValue(file: string, where: string, def: SettingDef, value: unknown) {
   if (value === null || value === undefined || isBind(value)) return;
+  if (isResponsive(value)) {
+    if (!def.responsive)
+      fail(file, `${where}: valori per breakpoint ammessi solo con "responsive": true nello schema.`);
+    for (const [bp, v] of Object.entries(value)) checkValue(file, `${where}.${bp}`, { ...def, responsive: false }, v);
+    return;
+  }
   // Testi e link possono essere tradotti: { "it": "…", "en": "…" }.
   if (["text", "textarea", "link"].includes(def.type) && isLocalized(value)) return;
   const bad = (expected: string) => fail(file, `${where}: atteso ${expected}.`);
@@ -178,7 +198,15 @@ export function parseTree(
         if (!schema.slots[slot]) fail(file, `${at}.slots.${slot}: slot non dichiarato in sections/${node.type}.np.`);
         slots[slot] = convert(children, `${at}.slots.${slot}`, `${id}-${slot}`, schema.slots[slot].accepts);
       }
-      return { id, type: node.type, settings: node.settings, slots, ...(node.hidden ? { hidden: true } : {}) };
+      return {
+        id,
+        type: node.type,
+        settings: node.settings,
+        slots,
+        ...(node.hidden ? { hidden: true } : {}),
+        ...(node.visibility ? { visibility: node.visibility } : {}),
+        ...(node.css?.trim() ? { css: node.css } : {}),
+      };
     });
 
   return { layout: tree.layout ?? null, sections: convert(tree.sections, "sections", base) };
