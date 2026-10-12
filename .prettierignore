@@ -1,0 +1,7 @@
+build
+.react-router
+drizzle
+package-lock.json
+skills-lock.json
+storage
+.agents

@@ -380,14 +380,18 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
     if (!selection.has(entry.key)) selectOnly(entry.key);
     e.dataTransfer.setData(DRAG_TYPE, JSON.stringify(splitKeys(keys)));
     e.dataTransfer.effectAllowed = "move";
-    if (keys.size > 1) {
-      const ghost = document.createElement("div");
-      ghost.textContent = t("media.selected", { count: keys.size });
-      ghost.className = "fixed -top-96 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground";
-      document.body.append(ghost);
-      e.dataTransfer.setDragImage(ghost, -8, -8);
-      setTimeout(() => ghost.remove());
-    }
+    // Immagine di trascinamento sempre esplicita: dentro un contenitore `select-none` WebKit
+    // altrimenti cattura l'intera schermata. Il fantasma resta sotto il cursore (e non fuori
+    // schermo) perché Safari ricava l'immagine dall'area visibile dell'elemento.
+    const ghost = document.createElement("div");
+    ghost.textContent = keys.size > 1 ? t("media.selected", { count: keys.size }) : entryName(entry);
+    ghost.className =
+      "pointer-events-none fixed z-[9999] max-w-64 truncate rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground shadow";
+    ghost.style.left = `${e.clientX + 8}px`;
+    ghost.style.top = `${e.clientY + 8}px`;
+    document.body.append(ghost);
+    e.dataTransfer.setDragImage(ghost, -8, -8);
+    setTimeout(() => ghost.remove());
   };
 
   /** Props per rendere un elemento (cartella o voce del breadcrumb) destinazione di drop. */
@@ -419,20 +423,24 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
 
   // --- Menu contestuali ---
 
+  /** Voci per creare o caricare dentro `parentId` (null = radice). */
+  function containerMenu(parentId: number | null) {
+    return (
+      <ContextMenuGroup>
+        <ContextMenuItem onClick={() => setDialog({ type: "newFolder", parentId })}>
+          <FolderPlusIcon />
+          {t("media.newFolder")}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => pickUpload(parentId)}>
+          <UploadIcon />
+          {t("media.uploadHere")}
+        </ContextMenuItem>
+      </ContextMenuGroup>
+    );
+  }
+
   function folderMenu(folder: Folder | null, targets?: Targets) {
-    if (!folder)
-      return (
-        <ContextMenuGroup>
-          <ContextMenuItem onClick={() => setDialog({ type: "newFolder", parentId: null })}>
-            <FolderPlusIcon />
-            {t("media.newFolder")}
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => pickUpload(null)}>
-            <UploadIcon />
-            {t("media.uploadHere")}
-          </ContextMenuItem>
-        </ContextMenuGroup>
-      );
+    if (!folder) return containerMenu(null);
     const scope = targets ?? { folders: [folder.id], media: [] };
     return (
       <>
@@ -476,7 +484,8 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
     if (!entry)
       return (
         <>
-          {folderMenu(null)}
+          {/* Area vuota: agisce sulla cartella aperta. */}
+          {containerMenu(currentId)}
           {entries.length > 0 && (
             <>
               <ContextMenuSeparator />

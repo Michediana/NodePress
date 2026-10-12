@@ -7,7 +7,7 @@ import { ancestorsOf, childrenOf, dragKind, type Folder } from "./folders";
 
 type DropHandler = (target: number | null, e: React.DragEvent) => void;
 
-/** Albero delle cartelle della libreria, con menu contestuale e destinazione di drop. */
+/** Albero delle cartelle della libreria, con menu contestuale e destinazione di drop (entrambi opzionali). */
 export function FolderTree({
   folders,
   currentId,
@@ -18,9 +18,9 @@ export function FolderTree({
   folders: Folder[];
   currentId: number | null;
   onOpen: (id: number | null) => void;
-  onDrop: DropHandler;
+  onDrop?: DropHandler;
   /** Voci del menu contestuale per la cartella (null = radice). */
-  menu: (target: Folder | null) => React.ReactNode;
+  menu?: (target: Folder | null) => React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set(ancestorsOf(folders, currentId).map((f) => f.id)));
   const [menuTarget, setMenuTarget] = useState<Folder | null>(null);
@@ -54,25 +54,26 @@ export function FolderTree({
       return next;
     });
 
-  const dropProps = (target: number | null) => ({
-    onDragOver: (e: React.DragEvent) => {
-      if (!dragKind(e)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      e.dataTransfer.dropEffect = dragKind(e) === "files" ? "copy" : "move";
-      setDropTarget(target ?? "root");
-    },
-    onDragLeave: (e: React.DragEvent) => {
-      if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-      setDropTarget((prev) => (prev === (target ?? "root") ? null : prev));
-    },
-    onDrop: (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDropTarget(null);
-      onDrop(target, e);
-    },
-  });
+  const dropProps = (target: number | null) =>
+    onDrop && {
+      onDragOver: (e: React.DragEvent) => {
+        if (!dragKind(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = dragKind(e) === "files" ? "copy" : "move";
+        setDropTarget(target ?? "root");
+      },
+      onDragLeave: (e: React.DragEvent) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        setDropTarget((prev) => (prev === (target ?? "root") ? null : prev));
+      },
+      onDrop: (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDropTarget(null);
+        onDrop(target, e);
+      },
+    };
 
   const rowClass = (active: boolean, dropping: boolean) =>
     cn(
@@ -118,27 +119,31 @@ export function FolderTree({
     );
   }
 
+  const tree = (
+    <ul role="tree" aria-label={t("media.folders")} className="flex flex-col gap-px">
+      <li role="treeitem" aria-expanded aria-selected={currentId === null}>
+        <button
+          type="button"
+          className={rowClass(currentId === null, dropTarget === "root")}
+          style={{ paddingLeft: 4 }}
+          onClick={() => onOpen(null)}
+          onContextMenu={() => setMenuTarget(null)}
+          {...dropProps(null)}
+        >
+          <span className="flex size-5 shrink-0 items-center justify-center">
+            <LibraryIcon className="size-4 text-muted-foreground" />
+          </span>
+          <span className="truncate">{t("media.root")}</span>
+        </button>
+        <ul role="group">{childrenOf(folders, null).map((f) => renderNode(f, 1))}</ul>
+      </li>
+    </ul>
+  );
+  if (!menu) return tree;
   return (
     <ContextMenu>
       <ContextMenuTrigger className="flex min-h-full flex-col" onContextMenu={(e) => e.target === e.currentTarget && setMenuTarget(null)}>
-        <ul role="tree" aria-label={t("media.folders")} className="flex flex-col gap-px">
-          <li role="treeitem" aria-expanded aria-selected={currentId === null}>
-            <button
-              type="button"
-              className={rowClass(currentId === null, dropTarget === "root")}
-              style={{ paddingLeft: 4 }}
-              onClick={() => onOpen(null)}
-              onContextMenu={() => setMenuTarget(null)}
-              {...dropProps(null)}
-            >
-              <span className="flex size-5 shrink-0 items-center justify-center">
-                <LibraryIcon className="size-4 text-muted-foreground" />
-              </span>
-              <span className="truncate">{t("media.root")}</span>
-            </button>
-            <ul role="group">{childrenOf(folders, null).map((f) => renderNode(f, 1))}</ul>
-          </li>
-        </ul>
+        {tree}
       </ContextMenuTrigger>
       <ContextMenuContent className="min-w-48">{menu(menuTarget)}</ContextMenuContent>
     </ContextMenu>

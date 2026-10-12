@@ -8,7 +8,9 @@
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -48,6 +50,7 @@
     "@types/react-dom": "^19.2.7",
     "dotenv": "^18.0.7",
     "drizzle-kit": "^0.31.11",
+    "prettier": "3.9.10",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
