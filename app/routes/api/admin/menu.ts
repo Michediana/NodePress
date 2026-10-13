@@ -1,6 +1,6 @@
 import { ApiError, authenticate, handle, intParam, methodNotAllowed, readJson } from "~/.server/api";
 import { deleteMenu, getMenuWithItems, updateMenu } from "~/.server/menus";
-import { menuSchema } from "./menus";
+import { menuSchema } from "~/.server/api-admin";
 import type { Route } from "./+types/menu";
 
 async function find(id: string | undefined) {

@@ -7,6 +7,7 @@ import { createApiKey, deleteApiKey, listApiKeys } from "~/.server/api-keys";
 import { requirePermission } from "~/.server/auth";
 import { formToObject, handleUserErrors, parse, UserError } from "~/.server/forms";
 import { ApiDocs } from "~/admin/components/api-docs";
+import { McpSetup } from "~/admin/components/mcp-setup";
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast } from "~/admin/feedback";
@@ -25,7 +26,7 @@ import type { Route } from "./+types/api-keys";
 export async function loader({ request, context }: Route.LoaderArgs) {
   requirePermission(context, "apikeys");
   const [keys, docs] = await Promise.all([listApiKeys(), getApiDocsContext(request)]);
-  return { keys, docs };
+  return { keys, docs, mcpUrl: `${new URL(request.url).origin}/mcp` };
 }
 
 const createSchema = z.object({ name: z.string().trim().min(1).max(255), scope: z.enum(["read", "theme", "admin"]) });
@@ -162,6 +163,7 @@ export default function ApiKeys({ loaderData, actionData }: Route.ComponentProps
           </CardContent>
         </Card>
       </div>
+      <McpSetup url={loaderData.mcpUrl} apiKey={newKey} />
       <ApiDocs context={loaderData.docs} initialKey={newKey} />
     </>
   );

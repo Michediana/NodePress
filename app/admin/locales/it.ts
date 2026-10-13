@@ -109,9 +109,9 @@ export const it = {
     currentPassword: "Password attuale",
     wrongPassword: "La password attuale non è corretta.",
     passwordChanged: "Password aggiornata.",
-    themeKeys: "API key per la CLI dei temi",
+    themeKeys: "API key per la CLI e l'AI",
     themeKeysHelp:
-      "Key con scope theme per np theme pull/push/watch: valgono solo per le API dei temi e smettono di funzionare se perdi il permesso. La key appena creata si vede una sola volta.",
+      "Key con scope theme per np theme pull/push/watch e per il server MCP (/mcp): valgono solo per i temi e smettono di funzionare se perdi il permesso. La key appena creata si vede una sola volta.",
     themeKeyPlaceholder: "Es. portatile di lavoro",
   },
   users: {
@@ -486,6 +486,18 @@ export const it = {
     confirmRevoke: "Revocare la key? Le applicazioni che la usano smetteranno di funzionare.",
     createdTitle: "API key creata",
     createdHelp: "Copia la key ora: non sarà più visibile.",
+  },
+  mcp: {
+    title: "Server MCP per l'AI",
+    description:
+      "Collega un assistente AI (Claude, Cursor, VS Code…) al sito: potrà gestire contenuti, media, menu, redirect, lingue, impostazioni, utenti e temi tramite il Model Context Protocol.",
+    endpoint: "Endpoint",
+    scopes: "Una key admin dà accesso a tutto; una key theme solo ai temi (codice, bozze, anteprime, pubblicazione). Le key read non sono ammesse.",
+    otherClients: "Altri client",
+    claudeCodeHelp: "Esegui il comando nel terminale, nella cartella del progetto o con --scope user per averlo ovunque.",
+    desktopHelp: "Claude Desktop collega i server remoti tramite mcp-remote (serve Node.js): aggiungi la configurazione a claude_desktop_config.json e riavvia l'app.",
+    jsonHelp: "Per i client che supportano i server HTTP con header (Cursor, VS Code, Windsurf…), nel loro file di configurazione MCP.",
+    keyPlaceholder: "Sostituisci <API_KEY> con una key admin o theme: generane una qui sopra e i comandi la includeranno.",
   },
   apiDocs: {
     title: "Documentazione API",

@@ -17,7 +17,7 @@ const { nodes, nodeTranslations: tr } = schema;
 export type NodeType = Node["type"];
 
 /** Slug riservati a livello radice (rotte di sistema). */
-const RESERVED_ROOT_SLUGS = ["admin", "api", "uploads", "sitemap-xml", "robots-txt", "llms-txt"];
+const RESERVED_ROOT_SLUGS = ["admin", "api", "mcp", "uploads", "sitemap-xml", "robots-txt", "llms-txt"];
 
 /** Condizione SQL per traduzioni visibili sul front. */
 export function visibleTranslation(now = new Date()) {
@@ -334,7 +334,8 @@ async function addAutoRedirect(tx: Tx, from: string, to: string) {
 }
 
 function normalizeStatus(status: ContentStatus, publishedAt: Date | null | undefined) {
-  const now = new Date();
+  // Al secondo: MySQL arrotonda i millisecondi e "adesso" finirebbe nel futuro, quindi programmato.
+  const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   if (status === "draft") return { status, publishedAt: publishedAt ?? null };
   if (status === "scheduled") {
     if (!publishedAt) throw new UserError("Indica la data di pubblicazione programmata.");

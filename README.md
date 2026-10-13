@@ -28,6 +28,7 @@ Al primo avvio apri `http://localhost:5173/admin`: la procedura guidata su `/adm
 | `drizzle/` | Migrazioni SQL generate |
 | `app/routes/admin/` | Pannello di amministrazione |
 | `app/routes/api/` | API REST (`/api/v1/...`) |
+| `app/.server/mcp/` | Server MCP per gli assistenti AI (`/mcp`) |
 | `app/routes/front/` | Rendering SSR del sito (tutte le rotte non di sistema) |
 | `themes/` | Temi di partenza, installati nel DB al primo avvio |
 | `app/.server/theme/` | Compilatore, build, archivio nel DB e tema attivo |
@@ -199,6 +200,33 @@ curl -X POST http://localhost:5173/api/v1/admin/nodes \
   -H "Authorization: Bearer $NODEPRESS_KEY" -H "Content-Type: application/json" \
   -d '{"type":"page","parentId":null,"translations":{"it":{"title":"Chi siamo","slug":"chi-siamo","status":"published"}}}'
 ```
+
+## Server MCP per l'AI
+
+NodePress espone un server [MCP](https://modelcontextprotocol.io) su `/mcp`: un assistente AI (Claude Code, Claude Desktop, Cursor, VS Code…) può gestire il sito in linguaggio naturale. L'autenticazione usa le stesse API key delle API REST:
+
+- **admin:** tutto, cioè contenuti, media, menu, redirect, lingue, impostazioni, utenti e temi;
+- **theme:** solo i temi (codice, bozze, anteprime, pubblicazione), senza attivarli né eliminarli;
+- **read:** non ammessa.
+
+```bash
+claude mcp add --transport http nodepress http://localhost:5173/mcp --header "Authorization: Bearer $NODEPRESS_KEY"
+```
+
+In **API key** (`/admin/api-keys`) ci sono i comandi e le configurazioni pronti per i vari client, con l'URL del sito e la key appena generata.
+
+| Area | Tool |
+| --- | --- |
+| Orientamento | `site_info` (lingue, tema, template, sezioni, permessi), `guide` (contenuti e linguaggio dei temi) |
+| Contenuti | `content_tree`, `content_list`, `content_get`, `content_find_by_url`, `content_create`, `content_save_translation`, `content_update`, `content_reorder`, `content_delete_translation`, `content_delete`, `content_seo_analysis` |
+| Media | `media_list`, `media_get`, `media_upload` (da URL pubblico o base64), `media_update`, `media_delete`, `media_folders`, `media_folder_create` |
+| Sito | `menus_list`, `menu_get`, `menu_save`, `menu_delete`, `redirects_list`, `redirect_create`, `redirect_update`, `redirect_delete`, `languages_list`, `language_add`, `language_remove`, `language_set_default`, `settings_get`, `settings_update`, `users_list`, `user_create`, `user_update`, `user_delete` |
+| Temi | `themes_list`, `theme_get`, `theme_read_files`, `theme_write_files`, `theme_rename_file`, `theme_check_file`, `theme_preview`, `theme_publish`, `theme_create`, `theme_update`, `theme_activate`, `theme_delete` |
+
+- **Contenuti in Markdown:** i tool leggono e scrivono il testo in Markdown, convertito nel formato dell'editor a blocchi (`app/.server/markdown.ts`). Le immagini della media library sono `![alt](media:12 "didascalia")`; gallerie, embed e sezioni del tema viaggiano come commenti `<!-- np:gallery {…} -->`, così una lettura seguita da una scrittura non perde blocchi. In alternativa si può passare il JSON di Tiptap.
+- **Temi:** le scritture finiscono nella bozza con un'unica ricompilazione, e gli errori tornano con file, riga e colonna. `theme_preview` rende una pagina con la bozza e restituisce l'HTML e un link di anteprima; il sito cambia solo con `theme_publish`.
+- **Sicurezza:** i tool distruttivi sono marcati come tali, così i client chiedono conferma. `media_upload` scarica solo da indirizzi pubblici, non da reti private o dal server stesso.
+- **Trasporto:** HTTP "streamable" senza sessioni (`app/.server/mcp/`), servito su entrambe le origini se il pannello è separato. I client che accettano solo server locali (Claude Desktop) si collegano con `npx mcp-remote`.
 
 ## Content Security Policy
 

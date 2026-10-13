@@ -76,6 +76,9 @@ export default [
     route("*", "routes/api/not-found.ts"),
   ]),
 
+  // --- Server MCP per gli assistenti AI ---
+  route("mcp", "routes/mcp.ts"),
+
   // --- File generati e media ---
   route("sitemap.xml", "routes/seo/sitemap.ts"),
   route("robots.txt", "routes/seo/robots.ts"),

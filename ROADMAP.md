@@ -27,6 +27,12 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 - Le API pubbliche di lettura richiedono una key `read`, salvo un flag "API pubblica" nelle impostazioni.
 - Il front SSR legge direttamente dal DB lato server, senza passare dalle API.
 
+### Server MCP
+- Server MCP su `/mcp` per gestire il sito con un assistente AI, con le stesse API key delle API REST: `admin` per tutto, `theme` solo per i temi.
+- Trasporto HTTP "streamable" senza sessioni, dentro l'app: funziona anche verso un'installazione remota, senza processi aggiuntivi.
+- I tool usano i servizi del core, non le API REST: stesse validazioni, redirect automatici e ricompilazioni del pannello.
+- Contenuti in Markdown, convertiti in modo reversibile nel formato dell'editor a blocchi.
+
 ### Multilingua
 - Attivo da subito.
 - Pannello `/admin/settings/languages` per scegliere le lingue attive tra tutte le lingue ISO 639-1, con varianti regionali opzionali (es. `pt-BR`). I nomi vengono da `Intl.DisplayNames`.
@@ -170,6 +176,13 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 
 **Completata quando:** un dev lavora sul tema dal proprio editor con git e le modifiche arrivano in bozza a ogni salvataggio.
 
+### Server MCP ✅
+- Endpoint `/mcp` con 50 tool: contenuti, media (anche upload da URL), menu, redirect, lingue, impostazioni, utenti, temi (file, controllo, anteprima resa, pubblicazione, rollback).
+- Guida integrata per l'AI (struttura dei contenuti, Markdown, linguaggio dei temi con il riferimento di variabili, filtri e componenti).
+- Comandi e configurazioni pronti in **API key** per Claude Code, Claude Desktop e gli altri client.
+
+**Completata quando:** da Claude si crea una pagina bilingue con immagini, la si aggiunge al menu e si modifica il tema in bozza, verificandolo con l'anteprima prima di pubblicarlo.
+
 ### Fase 3 — Estensioni
 - Revisioni dei contenuti.
 - Campi personalizzati per tipo di raccoglitore.
@@ -178,5 +191,7 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 - Sistema di plugin/hook.
 
 ## Da valutare
+
+- **OAuth per il server MCP.** Oggi i client si autenticano con una API key nell'header. I connettori remoti di claude.ai e di altri client web richiedono OAuth 2.1 (con registrazione dinamica dei client): servirebbe un authorization server nel pannello, con consenso esplicito e scope admin/theme.
 
 - **`@tailwindcss/typography` nei temi.** Oggi i temi non possono usare plugin Tailwind (`@plugin` eseguirebbe codice sul server), quindi niente classi `prose` per i contenuti. Si potrebbe offrire il plugin dal core: una whitelist di plugin installati con NodePress, caricati dal server e non dal tema (es. `@plugin "@tailwindcss/typography"` ammesso, tutto il resto rifiutato). Il pacchetto va spostato tra le dipendenze di runtime.

@@ -32,8 +32,8 @@ export async function frontBaseUrl() {
 }
 
 const ADMIN_PATH = /^\/admin(\/|\.data$|$)/;
-/** Percorsi serviti su entrambe le origini: API (con key, senza cookie), media e asset del tema. */
-const SHARED_PATH = /^\/(api|uploads|_np)\//;
+/** Percorsi serviti su entrambe le origini: API e MCP (con key, senza cookie), media e asset del tema. */
+const SHARED_PATH = /^\/((api|uploads|_np)\/|mcp$)/;
 
 /**
  * Smista le richieste tra le due origini. Restituisce una risposta da dare subito (redirect, robots)

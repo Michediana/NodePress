@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { authenticate, handle, json, methodNotAllowed, readJson } from "~/.server/api";
+import { redirectSchema } from "~/.server/api-admin";
 import { pagination } from "~/.server/api-public";
 import { createRedirect, listRedirects } from "~/.server/redirects";
 import type { Route } from "./+types/redirects";
@@ -16,9 +16,6 @@ export const action = ({ request }: Route.ActionArgs) =>
   handle(request, async () => {
     if (request.method !== "POST") methodNotAllowed();
     await authenticate(request, "admin");
-    const input = await readJson(
-      request,
-      z.object({ fromPath: z.string().min(1).max(700), toPath: z.string().min(1).max(1000), statusCode: z.number().int().default(301) }),
-    );
+    const input = await readJson(request, redirectSchema);
     return json({ id: await createRedirect(input) }, 201);
   });

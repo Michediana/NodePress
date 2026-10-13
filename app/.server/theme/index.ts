@@ -61,6 +61,12 @@ export async function previewRedirect(request: Request) {
   return redirect(target, { headers: { "Set-Cookie": cookie } });
 }
 
+/** Cookie che mostra la bozza di un tema sul front, per chi visita il sito da fuori dal browser (server MCP). */
+export async function previewCookieHeader(theme: string) {
+  // serialize dà "np_preview=<valore>; Path=/; …": nell'header Cookie va solo la prima parte.
+  return (await previewCookie.serialize(createPreviewToken(theme))).split(";")[0];
+}
+
 export async function getFrontTheme(request: Request): Promise<FrontTheme> {
   const token = await previewCookie.parse(request.headers.get("Cookie"));
   const preview = typeof token === "string" && token ? verifyPreviewToken(token) : null;
