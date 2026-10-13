@@ -21,7 +21,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export const loader = ({ request, params }: Route.LoaderArgs) =>
   handle(request, async () => {
-    await authenticate(request, "admin");
+    await authenticate(request, "theme");
     const theme = await requireTheme(params.name);
     const file = params["*"] ?? "";
     if (!file) return { items: await listFiles(theme.id, { hash: new URL(request.url).searchParams.has("hash") }) };
@@ -35,7 +35,7 @@ export const loader = ({ request, params }: Route.LoaderArgs) =>
 
 export const action = ({ request, params }: Route.ActionArgs) =>
   handle(request, async () => {
-    const { user } = await authenticate(request, "admin");
+    const { user } = await authenticate(request, "theme");
     const file = params["*"] ?? "";
     if (!file) {
       if (request.method !== "POST") throw new ApiError(400, "Percorso del file mancante.");

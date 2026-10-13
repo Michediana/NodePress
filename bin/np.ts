@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // CLI di NodePress: sincronizza un tema tra il database e una cartella locale, per lavorarci
-// dal proprio editor e con git. Parla solo con le API REST (API key con scope admin), quindi
+// dal proprio editor e con git. Parla solo con le API REST (API key con scope theme o admin), quindi
 // funziona anche verso un'installazione remota. Nessuna dipendenza: gira con Node ≥ 22.18
 // (TypeScript eseguito direttamente, solo annotazioni di tipo).
 //
@@ -54,7 +54,7 @@ Comandi:
 
 Opzioni:
   --url <url>      indirizzo di NodePress (oppure NODEPRESS_URL; default ${DEFAULT_URL})
-  --key <key>      API key con scope admin (oppure NODEPRESS_KEY)
+  --key <key>      API key con scope theme o admin (oppure NODEPRESS_KEY)
   --theme <nome>   tema su cui lavorare, se diverso da quello collegato alla cartella
   --force          nei conflitti vince la parte che sta scrivendo (il locale con push/watch,
                    il server con pull); con push elimina anche i file presenti solo sul server
@@ -264,7 +264,7 @@ async function context(dirArg: string | undefined, flags: Flags, themeArg?: stri
   const config = existsSync(dir) ? await readConfig(dir) : {};
   const url = flags.url ?? process.env.NODEPRESS_URL ?? config.url ?? DEFAULT_URL;
   const key = flags.key ?? process.env.NODEPRESS_KEY;
-  if (!key) throw new CliError("API key mancante: usa --key o la variabile NODEPRESS_KEY (scope admin).");
+  if (!key) throw new CliError("API key mancante: usa --key o la variabile NODEPRESS_KEY (scope theme o admin).");
   const theme = flags.theme ?? themeArg ?? config.theme;
   if (!theme) throw new CliError(`Nessun tema collegato a ${dir}: indica il nome (np theme pull <nome>) o --theme.`);
   // Cambiando server o tema lo stato della sincronizzazione precedente non vale più.
@@ -282,7 +282,7 @@ async function context(dirArg: string | undefined, flags: Flags, themeArg?: stri
 async function list(flags: Flags) {
   const url = flags.url ?? process.env.NODEPRESS_URL ?? DEFAULT_URL;
   const key = flags.key ?? process.env.NODEPRESS_KEY;
-  if (!key) throw new CliError("API key mancante: usa --key o la variabile NODEPRESS_KEY (scope admin).");
+  if (!key) throw new CliError("API key mancante: usa --key o la variabile NODEPRESS_KEY (scope theme o admin).");
   type Row = { name: string; label: string; active: boolean; publishedBuildId: number | null; buildError: unknown };
   const { items } = await new Api(url, key).json<{ items: Row[] }>("GET", "/themes");
   for (const t of items) {

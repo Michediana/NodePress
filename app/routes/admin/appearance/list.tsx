@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Form, Link, redirect, useNavigation } from "react-router";
 import { z } from "zod";
 import { requirePermission } from "~/.server/auth";
+import { can, type Permission } from "~/lib/roles";
 import { formToObject, handleUserErrors, parse, UserError } from "~/.server/forms";
 import { scaffoldTheme } from "~/.server/theme/scaffold";
 import {
@@ -72,9 +73,10 @@ import { Spinner } from "~/components/ui/spinner";
 import type { Route } from "./+types/list";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  requirePermission(context, "themes");
+  const user = requirePermission(context, "themes.customize");
   const themes = await listThemes();
   return {
+    can: { code: can(user, "themes.code"), manage: can(user, "themes") },
     themes: themes.map((theme) => ({
       name: theme.name,
       label: theme.label,
@@ -101,11 +103,21 @@ const actionSchema = z.discriminatedUnion("intent", [
   z.object({ intent: z.literal("delete"), name: z.string() }),
 ]);
 
+/** Permesso richiesto da ogni azione: attivare ed eliminare sono da admin, pubblicare anche da editor. */
+const actionPermission = {
+  import: "themes.code",
+  create: "themes.code",
+  publish: "themes.customize",
+  activate: "themes",
+  delete: "themes",
+} satisfies Record<string, Permission>;
+
 export async function action({ request, context }: Route.ActionArgs) {
-  const user = requirePermission(context, "themes");
+  const form = await request.formData();
+  const intent = String(form.get("intent")) as keyof typeof actionPermission;
+  const user = requirePermission(context, actionPermission[intent] ?? "themes");
   return handleUserErrors(async () => {
-    const form = await request.formData();
-    if (form.get("intent") === "import") {
+    if (intent === "import") {
       const file = form.get("file");
       if (!(file instanceof File) || !file.size) throw new UserError(t("appearance.importDescription"));
       const name = String(form.get("name") ?? "").trim();
@@ -139,6 +151,7 @@ type ThemeItem = Route.ComponentProps["loaderData"]["themes"][number];
 
 export default function AppearanceList({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
+  const { can } = loaderData;
   const navigation = useNavigation();
   const busy = navigation.state === "submitting";
   const [dialog, setDialog] = useState<
@@ -158,16 +171,18 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
         title={t("nav.appearance")}
         description={t("appearance.description")}
         actions={
-          <>
-            <Button variant="outline" onClick={() => setDialog({ type: "import" })}>
-              <UploadIcon data-icon="inline-start" />
-              {t("appearance.import")}
-            </Button>
-            <Button onClick={() => setDialog({ type: "create" })}>
-              <PlusIcon data-icon="inline-start" />
-              {t("appearance.newTheme")}
-            </Button>
-          </>
+          can.code && (
+            <>
+              <Button variant="outline" onClick={() => setDialog({ type: "import" })}>
+                <UploadIcon data-icon="inline-start" />
+                {t("appearance.import")}
+              </Button>
+              <Button onClick={() => setDialog({ type: "create" })}>
+                <PlusIcon data-icon="inline-start" />
+                {t("appearance.newTheme")}
+              </Button>
+            </>
+          )
         }
       />
 
@@ -195,16 +210,20 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
                         <EyeIcon />
                         {t("appearance.preview")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDialog({ type: "create", from: theme.name })}>
-                        <CopyIcon />
-                        {t("appearance.duplicate")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem render={<a href={`/admin/appearance/${theme.name}/api?export`} download />}>
-                        <DownloadIcon />
-                        {t("appearance.export")}
-                      </DropdownMenuItem>
+                      {can.code && (
+                        <>
+                          <DropdownMenuItem onClick={() => setDialog({ type: "create", from: theme.name })}>
+                            <CopyIcon />
+                            {t("appearance.duplicate")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem render={<a href={`/admin/appearance/${theme.name}/api?export`} download />}>
+                            <DownloadIcon />
+                            {t("appearance.export")}
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuGroup>
-                    {!theme.active && (
+                    {can.manage && !theme.active && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem variant="destructive" onClick={() => setDialog({ type: "delete", theme })}>
@@ -233,15 +252,17 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
                 <PaintbrushIcon data-icon="inline-start" />
                 {t("visual.open")}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                nativeButton={false}
-                render={<Link to={`/admin/appearance/${theme.name}`} />}
-              >
-                <CodeIcon data-icon="inline-start" />
-                {t("appearance.edit")}
-              </Button>
+              {can.code && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link to={`/admin/appearance/${theme.name}`} />}
+                >
+                  <CodeIcon data-icon="inline-start" />
+                  {t("appearance.edit")}
+                </Button>
+              )}
               {theme.unpublished && !theme.buildError && (
                 <Form method="post">
                   <input type="hidden" name="name" value={theme.name} />
@@ -250,7 +271,7 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
                   </Button>
                 </Form>
               )}
-              {!theme.active && theme.published && (
+              {can.manage && !theme.active && theme.published && (
                 <Form method="post">
                   <input type="hidden" name="name" value={theme.name} />
                   <Button size="sm" variant="outline" name="intent" value="activate" disabled={busy}>

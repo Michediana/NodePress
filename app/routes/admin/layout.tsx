@@ -45,7 +45,7 @@ import {
 import { Separator } from "~/components/ui/separator";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { can, type Permission } from "~/lib/roles";
+import { can, type Permission, type Subject } from "~/lib/roles";
 import type { Route } from "./+types/layout";
 
 export const middleware: Route.MiddlewareFunction[] = [
@@ -80,7 +80,7 @@ const contentNav: NavEntry[] = [
 ];
 
 const siteNav: NavEntry[] = [
-  { to: "/admin/appearance", label: "nav.appearance", icon: PaletteIcon, permission: "themes" },
+  { to: "/admin/appearance", label: "nav.appearance", icon: PaletteIcon, permission: "themes.customize" },
   { to: "/admin/menus", label: "nav.menus", icon: MenuIcon, permission: "menus" },
   { to: "/admin/redirects", label: "nav.redirects", icon: SignpostIcon, permission: "redirects" },
   { to: "/admin/users", label: "nav.users", icon: UsersIcon, permission: "users" },
@@ -88,9 +88,9 @@ const siteNav: NavEntry[] = [
   { to: "/admin/settings", label: "nav.settings", icon: SettingsIcon, permission: "settings" },
 ];
 
-function NavGroup({ label, entries, role }: { label: string; entries: NavEntry[]; role: Route.ComponentProps["loaderData"]["user"]["role"] }) {
+function NavGroup({ label, entries, user }: { label: string; entries: NavEntry[]; user: Subject }) {
   const location = useLocation();
-  const visible = entries.filter((e) => !e.permission || can(role, e.permission));
+  const visible = entries.filter((e) => !e.permission || can(user, e.permission));
   if (!visible.length) return null;
   return (
     <SidebarGroup>
@@ -143,8 +143,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             </SidebarMenu>
           </SidebarHeader>
           <SidebarContent>
-            <NavGroup label="nav.groupContent" entries={contentNav} role={user.role} />
-            <NavGroup label="nav.groupSite" entries={siteNav} role={user.role} />
+            <NavGroup label="nav.groupContent" entries={contentNav} user={user} />
+            <NavGroup label="nav.groupSite" entries={siteNav} user={user} />
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>

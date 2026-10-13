@@ -1,6 +1,9 @@
 import path from "node:path";
 import { z } from "zod";
 import { requirePermission } from "~/.server/auth";
+import { t } from "~/admin/i18n";
+import { can } from "~/lib/roles";
+import { isCustomizationFile } from "~/lib/theme/files";
 import { UserError } from "~/.server/forms";
 import { isTextFile, lintThemeFile, THEME_FILE_TYPES } from "~/.server/theme/build";
 import {
@@ -20,7 +23,7 @@ import type { Route } from "./+types/api";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
-  requirePermission(context, "themes");
+  requirePermission(context, "themes.code");
   const theme = await requireTheme(params.name);
   const url = new URL(request.url);
   if (url.searchParams.has("export")) {
@@ -46,10 +49,12 @@ const actionSchema = z.discriminatedUnion("intent", [
 ]);
 
 export async function action({ request, params, context }: Route.ActionArgs) {
-  const user = requirePermission(context, "themes");
+  const user = requirePermission(context, "themes.customize");
+  const canCode = can(user, "themes.code");
   try {
     // Upload di un file binario (asset): multipart con "path" e "file".
     if (request.headers.get("Content-Type")?.startsWith("multipart/form-data")) {
+      if (!canCode) throw new UserError(t("errors.forbidden"), 403);
       const form = await request.formData();
       const file = form.get("file");
       const target = form.get("path");
@@ -62,6 +67,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     const parsed = actionSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) throw new UserError("Richiesta non valida.");
     const input = parsed.data;
+    // Senza "themes.code" (editor visuale) si salvano solo composizione, token e CSS di override, e si pubblica.
+    const customizeOnly = input.intent === "publish" || (input.intent === "save" && isCustomizationFile(input.path));
+    if (!canCode && !customizeOnly) throw new UserError(t("errors.forbidden"), 403);
     switch (input.intent) {
       case "lint": {
         const error = await lintThemeFile(input.path, input.content);

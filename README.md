@@ -112,7 +112,7 @@ Un admin può vedere la bozza di qualsiasi tema sul sito vero aprendo `/?np_prev
 
 ### CLI
 
-Per lavorare su un tema dal proprio editor e con git, `bin/np.ts` sincronizza il tema tra il database e una cartella locale tramite le API REST. Serve una API key con scope `admin` (creata in `/admin/api-keys`); funziona anche verso un'installazione remota. Non ha dipendenze e gira con Node ≥ 22.18, anche copiata fuori dal progetto.
+Per lavorare su un tema dal proprio editor e con git, `bin/np.ts` sincronizza il tema tra il database e una cartella locale tramite le API REST. Serve una API key con scope `theme`, che ogni sviluppatore tema crea dal proprio **Profilo**, oppure una key `admin` da `/admin/api-keys`; funziona anche verso un'installazione remota. Non ha dipendenze e gira con Node ≥ 22.18, anche copiata fuori dal progetto.
 
 ```bash
 export NODEPRESS_KEY=np_…        # e NODEPRESS_URL se non è http://localhost:5173
@@ -133,9 +133,19 @@ Dentro la cartella del tema si può usare anche `node <percorso>/bin/np.ts theme
 
 La cartella ricorda server, tema e stato dell'ultima sincronizzazione in `.nodepress.json` (la key non viene mai salvata; `pull` lo aggiunge a `.gitignore`). La sincronizzazione è a tre vie: un file modificato solo sul server, per esempio dall'editor visuale, non viene sovrascritto da `push` ma segnalato da scaricare con `pull`; se è cambiato da entrambe le parti è un conflitto, e `--force` fa vincere chi scrive (il locale con `push`, il server con `pull`). `push` esce con codice 1 se il tema non compila, quindi `push && publish` pubblica solo una bozza valida.
 
+### Permessi sui temi
+
+| Chi | Cosa può fare |
+| --- | --- |
+| Editor | Editor visuale: composizione, token, CSS di override; pubblicazione; anteprima della bozza |
+| Sviluppatore tema | Come l'editor, più codice dei temi, creazione, duplicazione, import/export e CLI |
+| Amministratore | Tutto, compresi attivazione ed eliminazione dei temi |
+
+"Sviluppatore tema" è una capability che si attiva per un singolo utente da **Utenti** (gli amministratori ce l'hanno già). Dall'editor visuale, chi non è sviluppatore scrive solo `templates/*.json`, `groups/*.json`, `config/tokens.json` e `config/custom.css`, quindi niente markup né JS. Il JS del tema gira sul sito con la stessa origine del pannello: concedi la capability solo a persone di fiducia.
+
 ## API REST
 
-Autenticazione con API key creata in `/admin/api-keys`, inviata come `Authorization: Bearer <key>` o `X-API-Key: <key>`.
+Autenticazione con API key creata in `/admin/api-keys`, inviata come `Authorization: Bearer <key>` o `X-API-Key: <key>`. Scope: `read` (lettura), `theme` (solo le API dei temi, senza attivarli né eliminarli; vale finché chi l'ha creata è sviluppatore tema), `admin` (tutto).
 
 Lettura (scope `read`, oppure libera se "API pubblica" è attiva):
 

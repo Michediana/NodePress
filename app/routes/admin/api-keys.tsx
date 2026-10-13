@@ -1,4 +1,4 @@
-import { CopyIcon, EyeIcon, KeyRoundIcon, ShieldIcon, TrashIcon } from "lucide-react";
+import { CopyIcon, EyeIcon, KeyRoundIcon, PaletteIcon, ShieldIcon, TrashIcon } from "lucide-react";
 import { Form, useSubmit } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -28,7 +28,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return { keys, docs };
 }
 
-const createSchema = z.object({ name: z.string().trim().min(1).max(255), scope: z.enum(["read", "admin"]) });
+const createSchema = z.object({ name: z.string().trim().min(1).max(255), scope: z.enum(["read", "theme", "admin"]) });
 
 export async function action({ request, context }: Route.ActionArgs) {
   const user = requirePermission(context, "apikeys");
@@ -48,6 +48,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 const scopes = [
   { value: "read", label: <IconLabel icon={EyeIcon}>read</IconLabel> },
+  { value: "theme", label: <IconLabel icon={PaletteIcon}>theme</IconLabel> },
   { value: "admin", label: <IconLabel icon={ShieldIcon}>admin</IconLabel> },
 ];
 

@@ -5,7 +5,7 @@ import type { Route } from "./+types/theme-export";
 /** Sorgenti del tema in uno zip, reimportabile con POST /themes. */
 export const loader = ({ request, params }: Route.LoaderArgs) =>
   handle(request, async () => {
-    await authenticate(request, "admin");
+    await authenticate(request, "theme");
     const zip = await exportTheme(params.name);
     return new Response(new Uint8Array(zip), {
       headers: {

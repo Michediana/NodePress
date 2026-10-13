@@ -48,7 +48,12 @@ export default function UserList({ loaderData }: Route.ComponentProps) {
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <Badge variant={user.role === "admin" ? "default" : "secondary"}>{t(`roles.${user.role}`)}</Badge>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>{t(`roles.${user.role}`)}</Badge>
+                      {user.themeDeveloper && user.role !== "admin" && (
+                        <Badge variant="outline">{t("users.themeDeveloper")}</Badge>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

@@ -33,6 +33,8 @@ export const users = mysqlTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   role: mysqlEnum("role", ["admin", "editor", "author"]).notNull().default("author"),
+  /** Capability "Sviluppatore tema": codice dei temi e CLI anche senza essere admin. */
+  themeDeveloper: boolean("theme_developer").notNull().default(false),
   createdAt: now(),
   updatedAt: updated(),
 });
@@ -65,7 +67,7 @@ export const apiKeys = mysqlTable("api_keys", {
   name: varchar("name", { length: 255 }).notNull(),
   prefix: varchar("prefix", { length: 16 }).notNull(),
   keyHash: varchar("key_hash", { length: 64 }).notNull().unique(),
-  scope: mysqlEnum("scope", ["read", "admin"]).notNull(),
+  scope: mysqlEnum("scope", ["read", "admin", "theme"]).notNull(),
   createdBy: int("created_by").references(() => users.id, { onDelete: "set null" }),
   lastUsedAt: datetime("last_used_at"),
   createdAt: now(),

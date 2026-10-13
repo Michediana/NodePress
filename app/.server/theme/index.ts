@@ -4,6 +4,7 @@ import { componentPath, type ThemeBundle } from "~/lib/theme/ast";
 import { sectionPath, walkSections, type ItemsQuery, type SectionNode } from "~/lib/theme/sections";
 import { collectionItems, loadMediaMap, resolveCollectionId } from "../front";
 import { defaultTemplates, templateList, type TemplateKind, type ThemeBuildData } from "~/lib/theme/manifest";
+import { can } from "~/lib/roles";
 import { getSessionUser } from "../auth";
 import { ensureActiveTheme, findTheme, getBuild } from "./store";
 
@@ -34,7 +35,7 @@ async function loadBuild(id: number) {
 }
 
 /**
- * `?np_preview=<tema>` attiva l'anteprima della bozza (solo admin), `?np_preview=off` la chiude.
+ * `?np_preview=<tema>` attiva l'anteprima della bozza (per chi può modificare i temi), `?np_preview=off` la chiude.
  * Restituisce il redirect da lanciare, oppure null.
  */
 export async function previewRedirect(request: Request) {
@@ -44,7 +45,7 @@ export async function previewRedirect(request: Request) {
   url.searchParams.delete("np_preview");
   const target = url.pathname + url.search;
   const user = await getSessionUser(request);
-  if (value === "off" || value === "" || user?.role !== "admin") {
+  if (value === "off" || value === "" || !user || !can(user, "themes.customize")) {
     return redirect(target, { headers: { "Set-Cookie": await previewCookie.serialize("", { maxAge: 0 }) } });
   }
   return redirect(target, { headers: { "Set-Cookie": await previewCookie.serialize(value) } });
@@ -54,7 +55,7 @@ export async function getFrontTheme(request: Request): Promise<FrontTheme> {
   const preview = await previewCookie.parse(request.headers.get("Cookie"));
   if (typeof preview === "string" && preview) {
     const user = await getSessionUser(request);
-    const theme = user?.role === "admin" ? await findTheme(preview) : null;
+    const theme = user && can(user, "themes.customize") ? await findTheme(preview) : null;
     if (theme?.draftBuildId) {
       return {
         name: theme.name,

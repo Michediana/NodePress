@@ -9,7 +9,7 @@ const publishSchema = z.object({ buildId: z.number().int().positive().optional()
 export const action = ({ request, params }: Route.ActionArgs) =>
   handle(request, async () => {
     if (request.method !== "POST") methodNotAllowed();
-    await authenticate(request, "admin");
+    await authenticate(request, "theme");
     const text = await request.text();
     let body: unknown = {};
     try {

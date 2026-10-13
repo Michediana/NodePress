@@ -41,7 +41,7 @@ import { cn } from "~/lib/utils";
 import type { Route } from "./+types/editor";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  requirePermission(context, "themes");
+  requirePermission(context, "themes.code");
   const theme = await requireTheme(params.name);
   const [files, active, draft] = await Promise.all([
     listFiles(theme.id),

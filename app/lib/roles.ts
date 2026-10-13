@@ -11,7 +11,15 @@ export type Permission =
   | "settings"
   | "users"
   | "apikeys"
-  | "themes"; // temi: codice, attivazione, pubblicazione
+  | "themes" // temi: attivazione ed eliminazione
+  | "themes.code" // temi: codice, creazione, import/export, CLI
+  | "themes.customize"; // temi: editor visuale (composizione, token, CSS di override) e pubblicazione
+
+/** Capacità aggiuntive assegnabili a un utente, oltre a quelle del ruolo. */
+export type Capabilities = { themeDeveloper?: boolean };
+
+/** Chi viene controllato: un ruolo, oppure un utente con le sue capacità. */
+export type Subject = Role | ({ role: Role } & Capabilities);
 
 const permissions: Record<Role, Permission[]> = {
   admin: [
@@ -26,13 +34,20 @@ const permissions: Record<Role, Permission[]> = {
     "users",
     "apikeys",
     "themes",
+    "themes.code",
+    "themes.customize",
   ],
-  editor: ["content.any", "content.own", "media", "media.upload"],
+  editor: ["content.any", "content.own", "media", "media.upload", "themes.customize"],
   author: ["content.own", "media.upload"],
 };
 
-export function can(role: Role, permission: Permission) {
-  return permissions[role].includes(permission);
+/** "Sviluppatore tema": modifica il codice dei temi, anche dalla CLI. */
+const themeDeveloperPermissions: Permission[] = ["themes.code", "themes.customize"];
+
+export function can(subject: Subject, permission: Permission) {
+  const user = typeof subject === "string" ? { role: subject } : subject;
+  if (permissions[user.role].includes(permission)) return true;
+  return Boolean(user.themeDeveloper && themeDeveloperPermissions.includes(permission));
 }
 
 export const roles: Role[] = ["admin", "editor", "author"];

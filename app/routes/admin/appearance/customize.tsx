@@ -4,12 +4,13 @@ import { getTreeOptions } from "~/.server/nodes";
 import { getSetting } from "~/.server/settings";
 import { bundleFor } from "~/.server/theme";
 import { getBuild, listBuilds, readSources, requireTheme, samplePathForTemplate } from "~/.server/theme/store";
+import { can } from "~/lib/roles";
 import { templateList } from "~/lib/theme/manifest";
 import type { Route } from "./+types/customize";
 import { VisualEditor } from "~/admin/visual-editor/visual-editor";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  requirePermission(context, "themes");
+  const user = requirePermission(context, "themes.customize");
   const theme = await requireTheme(params.name);
   if (!theme.draftBuildId)
     throw new Response("Il tema non ha ancora una build valida: correggilo nell'editor del codice.", { status: 409 });
@@ -68,6 +69,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       buildError: theme.buildError,
       publishedBuildId: theme.publishedBuildId,
     },
+    canEditCode: can(user, "themes.code"),
     templates,
     trees,
     tokens: data.manifest.tokens ?? {},

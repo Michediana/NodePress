@@ -64,6 +64,8 @@ export type VisualEditorData = {
     buildError: ThemeBuildError | null;
     publishedBuildId: number | null;
   };
+  /** L'utente può aprire l'editor del codice (admin o sviluppatore tema). */
+  canEditCode: boolean;
   templates: { name: string; label: string; file: string; editable: boolean; groups: string[]; path: string | null }[];
   trees: Record<string, unknown>;
   tokens: Record<string, ThemeToken>;
@@ -319,22 +321,24 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
             </TooltipTrigger>
             <TooltipContent>{t("editor.redo")} (⇧⌘Z)</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  nativeButton={false}
-                  render={<Link to={`/admin/appearance/${theme.name}`} />}
-                  aria-label={t("visual.code")}
-                />
-              }
-            >
-              <CodeIcon />
-            </TooltipTrigger>
-            <TooltipContent>{t("visual.code")}</TooltipContent>
-          </Tooltip>
+          {data.canEditCode && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    nativeButton={false}
+                    render={<Link to={`/admin/appearance/${theme.name}`} />}
+                    aria-label={t("visual.code")}
+                  />
+                }
+              >
+                <CodeIcon />
+              </TooltipTrigger>
+              <TooltipContent>{t("visual.code")}</TooltipContent>
+            </Tooltip>
+          )}
           <Button size="sm" className="ml-1" onClick={() => setDialog("publish")} disabled={dirty}>
             {t("appearance.publish")}
           </Button>

@@ -13,7 +13,7 @@ const createSchema = z.object({
 
 export const loader = ({ request }: Route.LoaderArgs) =>
   handle(request, async () => {
-    await authenticate(request, "admin");
+    await authenticate(request, "theme");
     return { items: await listThemes() };
   });
 
@@ -21,7 +21,7 @@ export const loader = ({ request }: Route.LoaderArgs) =>
 export const action = ({ request }: Route.ActionArgs) =>
   handle(request, async () => {
     if (request.method !== "POST") methodNotAllowed();
-    const { user } = await authenticate(request, "admin");
+    const { user } = await authenticate(request, "theme");
     const userId = user?.id ?? null;
     if (request.headers.get("Content-Type")?.startsWith("multipart/form-data")) {
       const form = await request.formData().catch(() => {

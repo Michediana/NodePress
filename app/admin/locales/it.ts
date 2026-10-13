@@ -109,6 +109,10 @@ export const it = {
     currentPassword: "Password attuale",
     wrongPassword: "La password attuale non è corretta.",
     passwordChanged: "Password aggiornata.",
+    themeKeys: "API key per la CLI dei temi",
+    themeKeysHelp:
+      "Key con scope theme per np theme pull/push/watch: valgono solo per le API dei temi e smettono di funzionare se perdi il permesso. La key appena creata si vede una sola volta.",
+    themeKeyPlaceholder: "Es. portatile di lavoro",
   },
   users: {
     description: "Gli utenti che possono accedere al pannello e il loro ruolo.",
@@ -117,7 +121,8 @@ export const it = {
     name: "Nome",
     email: "Email",
     role: "Ruolo",
-    roleHelp: "Amministratore: tutto. Editor: contenuti e media. Autore: solo i propri contenuti.",
+    roleHelp:
+      "Amministratore: tutto. Editor: contenuti, media ed editor visuale dei temi. Autore: solo i propri contenuti.",
     password: "Password",
     newPassword: "Nuova password",
     confirmPassword: "Conferma password",
@@ -125,6 +130,9 @@ export const it = {
     passwordKeep: "Lascia vuoto per non modificarla. Cambiandola, l'utente viene disconnesso.",
     emailTaken: "Esiste già un utente con questa email.",
     confirmDelete: "Eliminare questo utente? I suoi contenuti resteranno senza autore.",
+    themeDeveloper: "Sviluppatore tema",
+    themeDeveloperHelp:
+      "Può modificare il codice dei temi, crearli e importarli, anche dalla CLI. Il JS del tema gira sul sito con la stessa origine del pannello: concedilo solo a persone di fiducia. Gli amministratori lo sono già.",
   },
   settings: {
     title: "Impostazioni",
@@ -457,12 +465,14 @@ export const it = {
     name: "Nome",
     key: "Key",
     scope: "Scope",
-    scopeHelp: "read: lettura dei contenuti pubblicati. admin: accesso completo alle API di gestione.",
+    scopeHelp:
+      "read: lettura dei contenuti pubblicati. theme: solo le API dei temi (CLI), senza attivarli né eliminarli. admin: accesso completo alle API di gestione.",
     lastUsed: "Ultimo uso",
     never: "Mai",
     empty: "Nessuna API key.",
     revoke: "Revoca",
     revoked: "API key revocata.",
+    notFound: "API key non trovata.",
     confirmRevoke: "Revocare la key? Le applicazioni che la usano smetteranno di funzionare.",
     createdTitle: "API key creata",
     createdHelp: "Copia la key ora: non sarà più visibile.",

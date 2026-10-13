@@ -20,7 +20,7 @@ export const sessionCookie = createCookie("np_session", {
   maxAge: SESSION_DAYS * 24 * 60 * 60,
 });
 
-export type SessionUser = Pick<User, "id" | "email" | "name" | "role">;
+export type SessionUser = Pick<User, "id" | "email" | "name" | "role" | "themeDeveloper">;
 
 export const userContext = createContext<SessionUser | null>(null);
 
@@ -70,6 +70,7 @@ export async function getSessionUser(request: Request): Promise<SessionUser | nu
       email: schema.users.email,
       name: schema.users.name,
       role: schema.users.role,
+      themeDeveloper: schema.users.themeDeveloper,
     })
     .from(schema.sessions)
     .innerJoin(schema.users, eq(schema.users.id, schema.sessions.userId))
@@ -115,7 +116,7 @@ export function getUser(context: Readonly<RouterContextProvider>): SessionUser {
 
 export function requirePermission(context: Readonly<RouterContextProvider>, permission: Permission) {
   const user = getUser(context);
-  if (!can(user.role, permission)) {
+  if (!can(user, permission)) {
     throw new Response("Non hai i permessi per questa sezione.", { status: 403 });
   }
   return user;

@@ -1,5 +1,5 @@
-
 import { z } from "zod";
+import { can } from "~/lib/roles";
 import { findApiKey, type ApiScope } from "./api-keys";
 import type { SessionUser } from "./auth";
 import { db, ensureMigrated, schema } from "./db";
@@ -36,6 +36,13 @@ function extractKey(request: Request) {
 
 export type ApiAuth = { scope: ApiScope | "public"; user: SessionUser | null };
 
+/** Scope delle key accettati per ciascun livello richiesto: una key theme vale solo per le API dei temi. */
+const ACCEPTED_SCOPES: Record<ApiScope, ApiScope[]> = {
+  read: ["read", "admin"],
+  admin: ["admin"],
+  theme: ["theme", "admin"],
+};
+
 /** Verifica la API key. Le letture sono libere se l'impostazione "API pubblica" è attiva. */
 export async function authenticate(request: Request, required: ApiScope): Promise<ApiAuth> {
   const key = extractKey(request);
@@ -45,12 +52,34 @@ export async function authenticate(request: Request, required: ApiScope): Promis
   }
   const row = await findApiKey(key);
   if (!row) throw new ApiError(401, "API key non valida.");
-  if (required === "admin" && row.scope !== "admin") throw new ApiError(403, "Questa API key non ha lo scope admin.");
+  if (!ACCEPTED_SCOPES[required].includes(row.scope)) {
+    throw new ApiError(
+      403,
+      `Questa API key ha lo scope ${row.scope}: serve ${required === "theme" ? "theme o admin" : required}.`,
+    );
+  }
   let user: SessionUser | null = null;
-  if (row.createdBy) {
-    const [creator] = await db.select().from(schema.users).where(eq(schema.users.id, row.createdBy));
+  const [creator] = row.createdBy ? await db.select().from(schema.users).where(eq(schema.users.id, row.createdBy)) : [];
+  if (row.scope === "theme") {
+    // Una key theme vale finché chi l'ha creata può ancora modificare il codice dei temi.
+    if (!creator || !can(creator, "themes.code"))
+      throw new ApiError(403, "Chi ha creato questa API key non può modificare il codice dei temi.");
+    user = {
+      id: creator.id,
+      email: creator.email,
+      name: creator.name,
+      role: creator.role,
+      themeDeveloper: creator.themeDeveloper,
+    };
+  } else if (creator) {
     // Le key admin agiscono con i permessi di amministratore.
-    if (creator) user = { id: creator.id, email: creator.email, name: creator.name, role: "admin" };
+    user = {
+      id: creator.id,
+      email: creator.email,
+      name: creator.name,
+      role: "admin",
+      themeDeveloper: creator.themeDeveloper,
+    };
   }
   return { scope: row.scope, user };
 }
@@ -103,4 +132,3 @@ export function langParam(url: URL, codes: string[], fallback: string) {
   if (!codes.includes(lang)) throw new ApiError(400, `Lingua "${lang}" non attiva.`);
   return lang;
 }
-

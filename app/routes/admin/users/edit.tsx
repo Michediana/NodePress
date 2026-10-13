@@ -7,6 +7,7 @@ import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast, type ActionResult } from "~/admin/feedback";
 import { IconLabel } from "~/admin/components/icon-label";
+import { SwitchField } from "~/admin/components/switch-field";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
@@ -94,6 +95,12 @@ export default function EditUser({ loaderData, actionData: rawActionData }: Rout
                 </Select>
                 <FieldDescription>{t("users.roleHelp")}</FieldDescription>
               </Field>
+              <SwitchField
+                name="themeDeveloper"
+                label={t("users.themeDeveloper")}
+                description={t("users.themeDeveloperHelp")}
+                defaultChecked={user?.themeDeveloper ?? false}
+              />
               <TextField
                 name="password"
                 type="password"
