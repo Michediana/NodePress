@@ -9,6 +9,7 @@ export type Permission =
   | "redirects"
   | "languages"
   | "settings"
+  | "analytics" // statistiche del sito
   | "users"
   | "apikeys"
   | "themes" // temi: attivazione ed eliminazione
@@ -31,13 +32,14 @@ const permissions: Record<Role, Permission[]> = {
     "redirects",
     "languages",
     "settings",
+    "analytics",
     "users",
     "apikeys",
     "themes",
     "themes.code",
     "themes.customize",
   ],
-  editor: ["content.any", "content.own", "media", "media.upload", "themes.customize"],
+  editor: ["content.any", "content.own", "media", "media.upload", "themes.customize", "analytics"],
   author: ["content.own", "media.upload"],
 };
 

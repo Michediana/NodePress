@@ -188,7 +188,7 @@ export const COMPONENT_DOCS: Record<(typeof CORE_COMPONENTS)[number], ComponentD
     snippet: "LanguageFlag code={$1} />",
   },
   ConsentLink: {
-    doc: "Pulsante che riapre le preferenze cookie (visibile solo se il tracking è attivo).",
+    doc: "Pulsante che riapre le preferenze cookie (visibile solo se il tracking o le analytics con consenso sono attivi).",
     props: { class: "Classi CSS" },
     snippet: "ConsentLink>$1</ConsentLink>",
   },

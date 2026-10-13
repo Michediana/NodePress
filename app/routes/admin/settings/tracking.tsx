@@ -1,22 +1,36 @@
+import { Trash2Icon } from "lucide-react";
+import { useSubmit } from "react-router";
 import { z } from "zod";
+import { clearAnalytics, purgeExpired } from "~/.server/analytics";
 import { requirePermission } from "~/.server/auth";
-import { formToObject, handleUserErrors, parse } from "~/.server/forms";
+import { checkbox, formToObject, handleUserErrors, parse } from "~/.server/forms";
 import { getSiteLanguages } from "~/.server/languages";
 import { getSettings, setSettings } from "~/.server/settings";
 import { TextareaField, TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { SettingsCard } from "~/admin/components/settings-form";
 import { SettingsNav } from "~/admin/components/settings-nav";
+import { SwitchField } from "~/admin/components/switch-field";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { useActionToast } from "~/admin/feedback";
 import { t } from "~/admin/i18n";
 import { LanguageLabel } from "~/components/language-flag";
+import { Button } from "~/components/ui/button";
 import { FieldSeparator } from "~/components/ui/field";
 import { consentTextsFor } from "~/lib/consent";
 import type { Route } from "./+types/tracking";
 
 export async function loader({ context }: Route.LoaderArgs) {
   requirePermission(context, "settings");
-  const settings = await getSettings(["ga4Id", "gtmId", "clarityId", "consentTexts"]);
+  const settings = await getSettings([
+    "ga4Id",
+    "gtmId",
+    "clarityId",
+    "consentTexts",
+    "analyticsEnabled",
+    "analyticsConsent",
+    "analyticsRetentionDays",
+  ]);
   const { codes } = await getSiteLanguages();
   return {
     ...settings,
@@ -30,11 +44,24 @@ const idsSchema = z.object({
   clarityId: z.union([z.literal(""), z.string().trim().regex(/^[a-z0-9]+$/i, "ID Clarity non valido")]),
 });
 
+const analyticsSchema = z.object({
+  analyticsEnabled: checkbox,
+  analyticsConsent: checkbox,
+  analyticsRetentionDays: z.coerce.number().int().min(1, "Almeno 1 giorno").max(3650, "Al massimo 3650 giorni"),
+});
+
 export async function action({ request, context }: Route.ActionArgs) {
   requirePermission(context, "settings");
   const form = formToObject(await request.formData());
   return handleUserErrors(async () => {
-    if (form.intent === "texts") {
+    if (form.intent === "analytics") {
+      const values = parse(analyticsSchema, form);
+      await setSettings(values);
+      await purgeExpired(values.analyticsRetentionDays, true);
+    } else if (form.intent === "clearAnalytics") {
+      await clearAnalytics();
+      return { message: t("tracking.analyticsCleared") };
+    } else if (form.intent === "texts") {
       const { codes } = await getSiteLanguages();
       const consentTexts: Record<string, { title: string; text: string; accept: string; reject: string }> = {};
       for (const code of codes) {
@@ -51,12 +78,40 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function TrackingSettings({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
+  const submit = useSubmit();
   const errors = actionData && "fieldErrors" in actionData ? (actionData.fieldErrors ?? {}) : {};
   return (
     <>
       <PageHeader title={t("settings.title")} />
       <SettingsNav />
       <div className="grid gap-6 xl:grid-cols-2">
+        <SettingsCard title={t("tracking.analytics")} description={t("tracking.analyticsHelp")} intent="analytics">
+          <SwitchField name="analyticsEnabled" label={t("tracking.analyticsEnabled")} description={t("tracking.analyticsEnabledHelp")} defaultChecked={loaderData.analyticsEnabled} />
+          <SwitchField name="analyticsConsent" label={t("tracking.analyticsConsent")} description={t("tracking.analyticsConsentHelp")} defaultChecked={loaderData.analyticsConsent} />
+          <TextField
+            name="analyticsRetentionDays"
+            type="number"
+            min={1}
+            max={3650}
+            label={t("tracking.retention")}
+            description={t("tracking.retentionHelp")}
+            defaultValue={loaderData.analyticsRetentionDays}
+            error={errors.analyticsRetentionDays}
+          />
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={async () => {
+                if (await confirmDialog({ description: t("tracking.confirmClear"), confirmLabel: t("tracking.clear"), destructive: true }))
+                  submit({ intent: "clearAnalytics" }, { method: "post" });
+              }}
+            >
+              <Trash2Icon data-icon="inline-start" />
+              {t("tracking.clear")}
+            </Button>
+          </div>
+        </SettingsCard>
         <SettingsCard title={t("tracking.title")} description={t("tracking.description")} intent="ids">
           <TextField name="ga4Id" label="Google Analytics 4" placeholder="G-XXXXXXXXXX" defaultValue={loaderData.ga4Id} error={errors.ga4Id} />
           <TextField name="gtmId" label="Google Tag Manager" placeholder="GTM-XXXXXXX" defaultValue={loaderData.gtmId} error={errors.gtmId} />

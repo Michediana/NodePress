@@ -30,6 +30,9 @@ export type SettingsMap = {
   gtmId: string;
   clarityId: string;
   consentTexts: Record<string, ConsentTexts>;
+  analyticsEnabled: boolean; // analytics interne, senza cookie
+  analyticsConsent: boolean; // raccogli solo dopo il consenso del banner
+  analyticsRetentionDays: number; // giorni di conservazione dei dati grezzi
   activeTheme: string; // nome del tema attivo sul front
   cspMode: CspMode; // Content Security Policy del front
 };
@@ -48,6 +51,9 @@ export const defaultSettings: SettingsMap = {
   gtmId: "",
   clarityId: "",
   consentTexts: {},
+  analyticsEnabled: true,
+  analyticsConsent: false,
+  analyticsRetentionDays: 395,
   activeTheme: "default",
   cspMode: "enforce",
 };

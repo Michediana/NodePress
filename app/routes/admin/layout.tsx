@@ -1,4 +1,5 @@
 import {
+  ChartColumnIcon,
   FileTextIcon,
   ImageIcon,
   KeyRoundIcon,
@@ -79,6 +80,7 @@ const contentNav: NavEntry[] = [
   { to: "/admin", label: "nav.dashboard", icon: LayoutDashboardIcon, end: true },
   { to: "/admin/content", label: "nav.content", icon: FileTextIcon },
   { to: "/admin/media", label: "nav.media", icon: ImageIcon, permission: "media.upload" },
+  { to: "/admin/analytics", label: "nav.analytics", icon: ChartColumnIcon, permission: "analytics" },
 ];
 
 const siteNav: NavEntry[] = [

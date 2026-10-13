@@ -109,6 +109,9 @@ export const settingsPatchSchema = z
       from: z.string(),
     }),
     consentTexts: z.record(z.string(), z.object({ title: z.string(), text: z.string(), accept: z.string(), reject: z.string() })),
+    analyticsEnabled: z.boolean(),
+    analyticsConsent: z.boolean(),
+    analyticsRetentionDays: z.number().int().min(1).max(3650),
     cspMode: z.enum(["enforce", "report-only", "off"]),
   })
   .partial();

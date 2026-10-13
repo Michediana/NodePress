@@ -3,6 +3,7 @@ import { publicUrl, resolveLang } from "~/.server/front";
 import { getFrontMenus } from "~/.server/menus";
 import { getSettings } from "~/.server/settings";
 import { bundleFor, getFrontTheme, previewRedirect, resolveBundleData } from "~/.server/theme";
+import { Analytics } from "~/components/front/analytics";
 import { ConsentBanner, consentDefaultsScript } from "~/components/front/consent";
 import type { SiteData } from "~/components/front/site";
 import { consentTextsFor } from "~/lib/consent";
@@ -17,7 +18,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<SiteData> {
   if (preview) throw preview;
   const { lang, defaultLang, codes } = await resolveLang(publicUrl(request).pathname);
   const [settings, theme] = await Promise.all([
-    getSettings(["siteName", "ga4Id", "gtmId", "clarityId", "consentTexts"]),
+    getSettings(["siteName", "ga4Id", "gtmId", "clarityId", "consentTexts", "analyticsEnabled", "analyticsConsent"]),
     getFrontTheme(request),
   ]);
   return {
@@ -28,6 +29,7 @@ export async function loader({ request }: Route.LoaderArgs): Promise<SiteData> {
     menus: await getFrontMenus(lang, defaultLang),
     tracking: { ga4Id: settings.ga4Id, gtmId: settings.gtmId, clarityId: settings.clarityId },
     consent: consentTextsFor(lang, settings.consentTexts),
+    analytics: { enabled: settings.analyticsEnabled, consent: settings.analyticsConsent },
     theme: {
       css: theme.data.css,
       js: theme.data.js,
@@ -51,6 +53,7 @@ export default function FrontLayout({ loaderData }: Route.ComponentProps) {
       {hasTracking && <script nonce={nonce} dangerouslySetInnerHTML={{ __html: consentDefaultsScript() }} />}
       <Outlet />
       <ConsentBanner />
+      <Analytics />
       {theme.preview && (
         <div className="np-preview-badge" role="status">
           Anteprima bozza: <strong>{theme.preview}</strong>

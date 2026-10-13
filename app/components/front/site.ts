@@ -12,6 +12,8 @@ export type SiteData = {
   menus: Record<string, FrontMenuItem[]>;
   tracking: { ga4Id: string; gtmId: string; clarityId: string };
   consent: ConsentTexts;
+  /** Analytics interne: attive, e se aspettano il consenso del banner. */
+  analytics: { enabled: boolean; consent: boolean };
   /** Asset compilati del tema, template per le pagine di errore e tema in anteprima (solo admin). */
   theme: {
     css: string | null;

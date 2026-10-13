@@ -1,14 +1,17 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   customType,
   datetime,
+  float,
   index,
   int,
   json,
   mysqlEnum,
   mysqlTable,
   primaryKey,
+  smallint,
   text,
   uniqueIndex,
   varchar,
@@ -352,6 +355,90 @@ export const themeAssets = mysqlTable("theme_assets", {
   createdAt: now(),
 });
 
+// --- Analytics interne ---
+// Niente cookie né identificativi salvati nel browser: il visitatore è un hash di IP + user agent
+// con un sale che cambia ogni giorno e viene poi buttato, quindi le visite di giorni diversi non
+// sono collegabili e l'IP non viene mai salvato. Le righe più vecchie della retention vengono cancellate.
+
+export const analyticsSessions = mysqlTable(
+  "analytics_sessions",
+  {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    visitorHash: varchar("visitor_hash", { length: 32 }).notNull(),
+    startedAt: datetime("started_at").notNull(),
+    lastSeenAt: datetime("last_seen_at").notNull(),
+    entryPath: varchar("entry_path", { length: 700 }).notNull(),
+    exitPath: varchar("exit_path", { length: 700 }).notNull(),
+    pageviews: int("pageviews").notNull().default(0),
+    events: int("events").notNull().default(0),
+    /** Tempo attivo (pagina visibile) sommato su tutte le pagine, in secondi. */
+    engagedSeconds: int("engaged_seconds").notNull().default(0),
+    channel: varchar("channel", { length: 16 }).notNull(),
+    referrerHost: varchar("referrer_host", { length: 255 }),
+    referrerUrl: varchar("referrer_url", { length: 1000 }),
+    utmSource: varchar("utm_source", { length: 255 }),
+    utmMedium: varchar("utm_medium", { length: 255 }),
+    utmCampaign: varchar("utm_campaign", { length: 255 }),
+    utmTerm: varchar("utm_term", { length: 255 }),
+    utmContent: varchar("utm_content", { length: 255 }),
+    country: varchar("country", { length: 2 }),
+    lang: varchar("lang", { length: 16 }),
+    browserLang: varchar("browser_lang", { length: 16 }),
+    timezone: varchar("timezone", { length: 64 }),
+    browser: varchar("browser", { length: 32 }),
+    browserVersion: varchar("browser_version", { length: 16 }),
+    os: varchar("os", { length: 32 }),
+    osVersion: varchar("os_version", { length: 16 }),
+    device: mysqlEnum("device", ["desktop", "mobile", "tablet"]),
+    screenWidth: smallint("screen_width", { unsigned: true }),
+    screenHeight: smallint("screen_height", { unsigned: true }),
+    pixelRatio: float("pixel_ratio"),
+    colorScheme: mysqlEnum("color_scheme", ["light", "dark"]),
+    connection: varchar("connection", { length: 16 }),
+  },
+  (t) => [
+    index("analytics_sessions_visitor_idx").on(t.visitorHash, t.lastSeenAt),
+    index("analytics_sessions_started_idx").on(t.startedAt),
+  ],
+);
+
+export const analyticsEvents = mysqlTable(
+  "analytics_events",
+  {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    sessionId: bigint("session_id", { mode: "number", unsigned: true })
+      .notNull()
+      .references(() => analyticsSessions.id, { onDelete: "cascade" }),
+    type: mysqlEnum("type", ["pageview", "event"]).notNull(),
+    /** Nome dell'evento (click in uscita, download, eventi personalizzati); null per le pagine viste. */
+    name: varchar("name", { length: 64 }),
+    /** Id casuale della pagina vista, generato in memoria nel browser: serve solo ad aggiornarla all'uscita. */
+    viewId: varchar("view_id", { length: 24 }),
+    path: varchar("path", { length: 700 }).notNull(),
+    title: varchar("title", { length: 255 }),
+    lang: varchar("lang", { length: 16 }),
+    nodeId: int("node_id"),
+    status: smallint("status", { unsigned: true }),
+    /** Pagina interna da cui si arriva (navigazione nel sito). */
+    previousPath: varchar("previous_path", { length: 700 }),
+    engagedMs: int("engaged_ms"),
+    scrollDepth: smallint("scroll_depth", { unsigned: true }),
+    // Core Web Vitals della prima pagina caricata (ms; CLS × 1000).
+    ttfb: int("ttfb"),
+    fcp: int("fcp"),
+    lcp: int("lcp"),
+    cls: int("cls"),
+    inp: int("inp"),
+    props: json("props").$type<Record<string, string | number | boolean>>(),
+    createdAt: datetime("created_at").notNull(),
+  },
+  (t) => [
+    index("analytics_events_session_idx").on(t.sessionId),
+    index("analytics_events_view_idx").on(t.viewId),
+    index("analytics_events_created_idx").on(t.createdAt, t.type),
+  ],
+);
+
 // --- Relazioni ---
 
 export const nodesRelations = relations(nodes, ({ one, many }) => ({
@@ -391,3 +478,5 @@ export type Redirect = typeof redirects.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type OAuthClient = typeof oauthClients.$inferSelect;
 export type OAuthGrant = typeof oauthGrants.$inferSelect;
+export type AnalyticsSession = typeof analyticsSessions.$inferSelect;
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CONSENT_CHANGE_EVENT } from "~/lib/analytics";
 import { CONSENT_COOKIE } from "~/lib/consent";
 import { useSite } from "./site";
 
@@ -21,7 +22,7 @@ export function consentDefaultsScript() {
   ].join("");
 }
 
-function readConsent(): "granted" | "denied" | null {
+export function readConsent(): "granted" | "denied" | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${CONSENT_COOKIE}=([^;]*)`));
   return match?.[1] === "granted" ? "granted" : match?.[1] === "denied" ? "denied" : null;
 }
@@ -41,8 +42,20 @@ function addScript(src: string) {
 
 let loaded = false;
 
+/** Il banner serve: c'è tracking di terze parti o le analytics interne chiedono il consenso. */
+function useConsentNeeded() {
+  const { tracking, analytics } = useSite();
+  return hasThirdParty(tracking) || (analytics.enabled && analytics.consent);
+}
+
+function hasThirdParty({ ga4Id, gtmId, clarityId }: Tracking) {
+  return Boolean(ga4Id || gtmId || clarityId);
+}
+
 /** Carica GTM, GA4 e Clarity: chiamata solo dopo il consenso. */
-function loadTracking({ ga4Id, gtmId, clarityId }: Tracking) {
+function loadTracking(tracking: Tracking) {
+  if (!hasThirdParty(tracking)) return;
+  const { ga4Id, gtmId, clarityId } = tracking;
   window.gtag("consent", "update", {
     ad_storage: "granted",
     ad_user_data: "granted",
@@ -75,7 +88,7 @@ export const OPEN_CONSENT_EVENT = "np:open-consent";
 /** Cookie banner nativo: gli script di tracking partono solo dopo "Accetta". */
 export function ConsentBanner() {
   const { tracking, consent } = useSite();
-  const enabled = Boolean(tracking.ga4Id || tracking.gtmId || tracking.clarityId);
+  const enabled = useConsentNeeded();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -93,6 +106,7 @@ export function ConsentBanner() {
   const choose = (value: "granted" | "denied") => {
     writeConsent(value);
     setOpen(false);
+    window.dispatchEvent(new CustomEvent(CONSENT_CHANGE_EVENT, { detail: value }));
     if (value === "granted") loadTracking(tracking);
     else if (loaded) window.location.reload(); // revoca: ricarica senza script
   };
@@ -119,8 +133,7 @@ export function ConsentBanner() {
 
 /** Link per riaprire le preferenze cookie (es. nel footer). */
 export function ConsentPreferencesLink({ children, className }: { children: React.ReactNode; className?: string }) {
-  const { tracking } = useSite();
-  if (!tracking.ga4Id && !tracking.gtmId && !tracking.clarityId) return null;
+  if (!useConsentNeeded()) return null;
   return (
     <button type="button" className={className} onClick={() => window.dispatchEvent(new Event(OPEN_CONSENT_EVENT))}>
       {children}

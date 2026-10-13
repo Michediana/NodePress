@@ -28,6 +28,7 @@ export default [
         route("redirects", "routes/admin/redirects.tsx"),
         ...prefix("users", [index("routes/admin/users/list.tsx"), route(":id", "routes/admin/users/edit.tsx")]),
         route("api-keys", "routes/admin/api-keys.tsx"),
+        route("analytics", "routes/admin/analytics.tsx"),
     ...prefix("appearance", [
       index("routes/admin/appearance/list.tsx"),
       route(":name", "routes/admin/appearance/editor.tsx"),
@@ -91,6 +92,7 @@ export default [
   route("llms.txt", "routes/seo/llms.ts"),
   route("uploads/*", "routes/media-file.ts"),
   route("_np/theme/a/:file", "routes/theme-asset.ts"),
+  route("_np/a", "routes/analytics-collect.ts"),
 
   // --- Front: tutte le altre rotte ---
   layout("routes/front/layout.tsx", [

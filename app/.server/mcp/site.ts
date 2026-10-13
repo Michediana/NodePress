@@ -283,7 +283,7 @@ export function registerSiteTools(server: McpServer, ctx: McpContext) {
     {
       title: "Impostazioni",
       description:
-        "Impostazioni del sito: nome e URL, API pubblica, formato e qualità delle immagini, robots.txt e llms.txt (null = generati), tracking (GA4, GTM, Clarity), testi del banner cookie per lingua, SMTP (password mascherata), CSP.",
+        "Impostazioni del sito: nome e URL, API pubblica, formato e qualità delle immagini, robots.txt e llms.txt (null = generati), tracking (GA4, GTM, Clarity), analytics interne (attive, consenso richiesto, giorni di retention), testi del banner cookie per lingua, SMTP (password mascherata), CSP.",
       readOnly: true,
     },
     async () => maskedSettings(),
