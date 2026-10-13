@@ -110,6 +110,29 @@ Per ogni sezione si possono impostare anche:
 
 Un admin può vedere la bozza di qualsiasi tema sul sito vero aprendo `/?np_preview=<tema>` (`?np_preview=off` per uscire; l'anteprima scade comunque dopo 30 minuti).
 
+### CLI
+
+Per lavorare su un tema dal proprio editor e con git, `bin/np.ts` sincronizza il tema tra il database e una cartella locale tramite le API REST. Serve una API key con scope `admin` (creata in `/admin/api-keys`); funziona anche verso un'installazione remota. Non ha dipendenze e gira con Node ≥ 22.18, anche copiata fuori dal progetto.
+
+```bash
+export NODEPRESS_KEY=np_…        # e NODEPRESS_URL se non è http://localhost:5173
+npm run np -- theme pull default ~/temi/default
+npm run np -- theme watch ~/temi/default
+```
+
+Dentro la cartella del tema si può usare anche `node <percorso>/bin/np.ts theme watch`, senza indicare la cartella.
+
+| Comando | Cosa fa |
+| --- | --- |
+| `np theme list` | Elenca i temi |
+| `np theme create <nome> [cartella]` | Crea un tema (`--label`, `--from <tema>` per duplicarlo) e lo scarica |
+| `np theme pull <nome> [cartella]` | Scarica il tema; `pull` senza nome aggiorna una cartella già collegata |
+| `np theme push [cartella]` | Carica le modifiche locali nella bozza, con un'unica ricompilazione |
+| `np theme watch [cartella]` | `push`, poi carica ogni salvataggio e mostra gli errori di compilazione con file, riga e colonna |
+| `np theme publish [cartella]` | Pubblica la bozza |
+
+La cartella ricorda server, tema e stato dell'ultima sincronizzazione in `.nodepress.json` (la key non viene mai salvata; `pull` lo aggiunge a `.gitignore`). La sincronizzazione è a tre vie: un file modificato solo sul server, per esempio dall'editor visuale, non viene sovrascritto da `push` ma segnalato da scaricare con `pull`; se è cambiato da entrambe le parti è un conflitto, e `--force` fa vincere chi scrive (il locale con `push`, il server con `pull`). `push` esce con codice 1 se il tema non compila, quindi `push && publish` pubblica solo una bozza valida.
+
 ## API REST
 
 Autenticazione con API key creata in `/admin/api-keys`, inviata come `Authorization: Bearer <key>` o `X-API-Key: <key>`.
@@ -135,7 +158,8 @@ Gestione (scope `admin`):
 - `GET|POST /api/v1/admin/users`
 - `GET|POST /api/v1/admin/themes` (POST JSON `{ name, label, from? }` crea o duplica; multipart con campo `file` importa uno zip)
 - `GET|PATCH|DELETE /api/v1/admin/themes/:name` (PATCH `{ active: true }` attiva il tema)
-- `GET /api/v1/admin/themes/:name/files`, `GET|PUT|DELETE /api/v1/admin/themes/:name/files/<percorso>` (contenuto grezzo nel body; la risposta riporta la build e l'eventuale errore)
+- `GET /api/v1/admin/themes/:name/files` (con `?hash` anche lo SHA-256 di ogni file), `GET|PUT|DELETE /api/v1/admin/themes/:name/files/<percorso>` (contenuto grezzo nel body; la risposta riporta la build e l'eventuale errore)
+- `POST /api/v1/admin/themes/:name/files`: più file con un'unica ricompilazione; multipart in cui ogni campo file ha come nome il percorso, e i campi `delete` indicano i percorsi da eliminare
 - `POST /api/v1/admin/themes/:name/publish` (body opzionale `{ buildId }` per il rollback)
 - `GET /api/v1/admin/themes/:name/export` (zip)
 

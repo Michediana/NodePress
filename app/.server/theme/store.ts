@@ -58,12 +58,14 @@ export async function readSources(themeId: number): Promise<ThemeSources> {
   return new Map(rows.map((r) => [r.path, r.content]));
 }
 
-export async function listFiles(themeId: number) {
+export async function listFiles(themeId: number, options: { hash?: boolean } = {}) {
   return db
     .select({
       path: themeFiles.path,
       size: sql<number>`length(${themeFiles.content})`,
       updatedAt: themeFiles.updatedAt,
+      // SHA-256 del contenuto, per la sincronizzazione della CLI.
+      ...(options.hash ? { hash: sql<string>`lower(sha2(${themeFiles.content}, 256))` } : {}),
     })
     .from(themeFiles)
     .where(eq(themeFiles.themeId, themeId))
@@ -153,6 +155,35 @@ export async function deleteThemeFile(name: string, file: string, userId: number
   if (clean === "theme.json") throw new UserError("theme.json non può essere eliminato.");
   const [res] = await db.delete(themeFiles).where(and(eq(themeFiles.themeId, theme.id), eq(themeFiles.path, clean)));
   if (!res.affectedRows) throw new UserError(`File "${clean}" non trovato.`, 404);
+  return rebuild(theme, userId);
+}
+
+/**
+ * Scrive ed elimina più file con un'unica ricompilazione (push e watch della CLI):
+ * a metà di una sincronizzazione il tema potrebbe non compilare.
+ */
+export async function syncThemeFiles(
+  name: string,
+  changes: { write: ThemeSources; remove: string[] },
+  userId: number | null,
+) {
+  const theme = await requireTheme(name);
+  const writes = [...changes.write].map(([file, content]) => ({ path: safePath(file), content }));
+  const removes = changes.remove.map(safePath);
+  if (removes.includes("theme.json")) throw new UserError("theme.json non può essere eliminato.");
+  if (writes.length + removes.length > MAX_FILES) throw new UserError(`Troppi file (massimo ${MAX_FILES}).`);
+  await db.transaction(async (tx) => {
+    // Un file per query, come in createTheme.
+    for (const file of writes) {
+      await tx
+        .insert(themeFiles)
+        .values({ ...file, themeId: theme.id })
+        .onDuplicateKeyUpdate({ set: { content: file.content, updatedAt: new Date() } });
+    }
+    if (removes.length) {
+      await tx.delete(themeFiles).where(and(eq(themeFiles.themeId, theme.id), inArray(themeFiles.path, removes)));
+    }
+  });
   return rebuild(theme, userId);
 }
 

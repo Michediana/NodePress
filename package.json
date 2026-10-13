@@ -9,6 +9,7 @@
     "typecheck": "react-router typegen && tsc",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
+    "np": "node bin/np.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

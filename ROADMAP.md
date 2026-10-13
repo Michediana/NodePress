@@ -162,7 +162,7 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 **Completata quando:** un utente senza codice cambia colori, font e layout della home e pubblica.
 
 #### 2.6 — Strumenti e sicurezza
-- CLI `np theme pull/push/watch` con API key.
+- CLI `np theme pull/push/watch` con API key. ✅
 - Capability "Sviluppatore tema", CSP con nonce, origine separata per il pannello (opzionale).
 - Tailwind opzionale nei temi tramite l'API `compile()`.
 
