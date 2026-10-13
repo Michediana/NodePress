@@ -181,6 +181,16 @@ curl -X POST http://localhost:5173/api/v1/admin/nodes \
   -d '{"type":"page","parentId":null,"translations":{"it":{"title":"Chi siamo","slug":"chi-siamo","status":"published"}}}'
 ```
 
+## Content Security Policy
+
+Le pagine del front vengono servite con una CSP che ha un nonce nuovo a ogni richiesta (`app/entry.server.tsx`, `app/.server/csp.ts`). Il pannello `/admin` ne resta fuori.
+
+- **Script:** girano solo quelli con il nonce, cioè React Router, il JS del tema e lo script del Consent Mode, più quelli che questi caricano a loro volta (`'strict-dynamic'`): GTM, GA4 e Clarity dopo il consenso, e gli import `https://` del tema. Gli script inseriti in altro modo, per esempio dentro un blocco HTML dei contenuti, vengono bloccati.
+- **Stili, immagini, font, iframe:** ammessi dallo stesso sito e da `https:`, compresi gli stili inline usati dai temi.
+- **Sempre:** `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'self'` (il sito si può incorniciare solo da sé stesso, per le anteprime del pannello) e, in produzione, `upgrade-insecure-requests`.
+
+In **Impostazioni → Generali → Sicurezza** la policy si può mettere in "Solo segnalazione", che segnala le violazioni nella console del browser senza bloccare nulla, oppure disattivare. Nei componenti del front, ogni `<script>` va scritto con `nonce={useNonce()}` (da `~/lib/csp`).
+
 ## Produzione
 
 ```bash

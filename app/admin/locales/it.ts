@@ -147,6 +147,11 @@ export const it = {
     siteUrlHelp: "Usato per canonical, hreflang, sitemap e link nelle email. Se vuoto si usa l'indirizzo della richiesta.",
     publicApi: "API pubblica",
     publicApiHelp: "Se attiva, le API di lettura dei contenuti non richiedono una API key.",
+    security: "Sicurezza",
+    csp: "Content Security Policy del sito",
+    cspHelp:
+      "Sul sito girano solo gli script di NodePress, del tema e del tracking (dopo il consenso). Gli script inseriti nei blocchi HTML dei contenuti vengono bloccati: per controllare cosa si romperebbe, usa \"Solo segnalazione\" e guarda la console del browser.",
+    cspModes: { enforce: "Attiva", "report-only": "Solo segnalazione", off: "Disattivata" },
   },
   languages: {
     description: "Le lingue in cui il sito è disponibile.",

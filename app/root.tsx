@@ -1,6 +1,7 @@
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useMatches } from "react-router";
 
 import type { Route } from "./+types/root";
+import { useNonce } from "./lib/csp";
 import { ensureMigrated } from "./.server/db";
 
 export const links: Route.LinksFunction = () => [
@@ -26,18 +27,19 @@ function useDocumentLang() {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const lang = useDocumentLang();
+  const nonce = useNonce();
   return (
     <html lang={lang}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
-        <Links />
+        <Links nonce={nonce} />
       </head>
       <body>
         {children}
-        <ScrollRestoration />
-        <Scripts />
+        <ScrollRestoration nonce={nonce} />
+        <Scripts nonce={nonce} />
       </body>
     </html>
   );

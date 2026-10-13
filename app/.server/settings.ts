@@ -14,6 +14,7 @@ export type SmtpSettings = {
 
 export type { ConsentTexts } from "~/lib/consent";
 import type { ConsentTexts } from "~/lib/consent";
+import type { CspMode } from "~/lib/csp";
 
 export type SettingsMap = {
   siteName: string;
@@ -30,6 +31,7 @@ export type SettingsMap = {
   clarityId: string;
   consentTexts: Record<string, ConsentTexts>;
   activeTheme: string; // nome del tema attivo sul front
+  cspMode: CspMode; // Content Security Policy del front
 };
 
 export const defaultSettings: SettingsMap = {
@@ -47,6 +49,7 @@ export const defaultSettings: SettingsMap = {
   clarityId: "",
   consentTexts: {},
   activeTheme: "default",
+  cspMode: "enforce",
 };
 
 export type SettingKey = keyof SettingsMap;

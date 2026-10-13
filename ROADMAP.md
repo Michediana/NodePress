@@ -164,7 +164,8 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 #### 2.6 — Strumenti e sicurezza
 - CLI `np theme pull/push/watch` con API key. ✅
 - Capability "Sviluppatore tema": editor visuale per gli editor, codice per admin e sviluppatori tema, API key con scope `theme`. ✅
-- CSP con nonce, origine separata per il pannello (opzionale).
+- CSP con nonce sul front, con modalità attiva/solo segnalazione/disattivata nelle impostazioni. ✅
+- Origine separata per il pannello (opzionale).
 - Tailwind opzionale nei temi tramite l'API `compile()`.
 
 **Completata quando:** un dev lavora sul tema dal proprio editor con git e le modifiche arrivano in bozza a ogni salvataggio.

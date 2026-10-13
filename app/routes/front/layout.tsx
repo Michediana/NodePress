@@ -6,6 +6,7 @@ import { bundleFor, getFrontTheme, previewRedirect, resolveBundleData } from "~/
 import { ConsentBanner, consentDefaultsScript } from "~/components/front/consent";
 import type { SiteData } from "~/components/front/site";
 import { consentTextsFor } from "~/lib/consent";
+import { useNonce } from "~/lib/csp";
 import frontCss from "~/front.css?url";
 import type { Route } from "./+types/layout";
 
@@ -41,12 +42,13 @@ export async function loader({ request }: Route.LoaderArgs): Promise<SiteData> {
 
 export default function FrontLayout({ loaderData }: Route.ComponentProps) {
   const { tracking, theme } = loaderData;
+  const nonce = useNonce();
   const hasTracking = Boolean(tracking.ga4Id || tracking.gtmId || tracking.clarityId);
   return (
     <>
       {theme.css && <link rel="stylesheet" href={theme.css} precedence="theme" />}
-      {theme.js && <script type="module" src={theme.js} async />}
-      {hasTracking && <script dangerouslySetInnerHTML={{ __html: consentDefaultsScript() }} />}
+      {theme.js && <script type="module" src={theme.js} async nonce={nonce} />}
+      {hasTracking && <script nonce={nonce} dangerouslySetInnerHTML={{ __html: consentDefaultsScript() }} />}
       <Outlet />
       <ConsentBanner />
       {theme.preview && (
