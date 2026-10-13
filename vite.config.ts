@@ -40,6 +40,6 @@ export default defineConfig({
       "tailwind-merge",
     ],
     // Dipendenze solo server, usate dai moduli .server.
-    exclude: ["sharp", "mysql2", "nodemailer", "drizzle-orm"],
+    exclude: ["sharp", "mysql2", "nodemailer", "drizzle-orm", "@tailwindcss/oxide"],
   },
 });

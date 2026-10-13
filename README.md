@@ -64,6 +64,25 @@ I file `.np` usano una sintassi JSX "senza JavaScript": tag HTML (con `class` e 
 - **CSS:** `url("../assets/font.woff2")` viene riscritto con l'URL dell'asset; gli `@import` esterni sono ammessi.
 - **JS:** import relativi tra file del tema o da URL `https://`; per l'interattività si usano i custom element.
 
+### Tailwind CSS
+
+Facoltativo. Un foglio in `styles/` che importa Tailwind viene compilato con Tailwind CSS v4 a ogni salvataggio, senza configurazione:
+
+```css
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #c00;
+}
+
+.button { @apply rounded-lg px-4 py-2 bg-brand text-white; }
+```
+
+- **Classi:** si estraggono da tutti i sorgenti del tema (`.np`, template e gruppi JSON, script), quindi `class="md:grid-cols-3 p-[7px]"` nel markup basta. Le classi che compaiono solo nei contenuti (per esempio in un blocco HTML) vanno dichiarate con `@source inline("…")`.
+- **Layer:** utility e regole del foglio stanno nel layer `theme`. Il preflight e gli `@layer base` finiscono in `np.reset`, così non cancellano gli stili dei componenti del core, come il banner dei cookie.
+- **Import:** si possono importare `tailwindcss`, le sue parti (`tailwindcss/theme`, `/preflight`, `/utilities`) e altri file CSS del tema con percorso relativo. Conviene tenerli fuori da `styles/` (es. `css/parts.css`), altrimenti vengono inclusi due volte.
+- **Non ammessi:** `@plugin` e `@config`, perché sono moduli JS che girerebbero sul server. Gli `@source` verso file non vengono letti. Tailwind si usa solo nei fogli di `styles/`, non negli `<style>` delle sezioni.
+
 ### Sezioni e template JSON
 
 Una sezione è un file `sections/<tipo>.np` con lo schema nel frontmatter:

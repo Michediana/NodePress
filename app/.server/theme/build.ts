@@ -13,6 +13,7 @@ import {
 } from "~/lib/theme/manifest";
 import { OVERRIDABLE_BLOCKS, walkSections, type SectionSchema, type SectionTree } from "~/lib/theme/sections";
 import { compileMarkup, ThemeCompileError, type EmbeddedBlock } from "./compile";
+import { compileTailwind, locateInSource, scanCandidates, splitBaseLayer, usesTailwind } from "./tailwind";
 import { parseSectionSchema, parseTree } from "./sections";
 
 // Build di un tema: dai sorgenti (percorso → contenuto) a markup compilato, CSS, JS e asset.
@@ -161,6 +162,11 @@ function compileCss(file: string, source: string, resolveUrl: (url: string) => s
     imports.push(rule.replace(/;$/, "").trim());
     return rule.replace(/[^\n]/g, " ");
   });
+  // I fogli Tailwind di styles/ arrivano qui già compilati: altrove l'import non verrebbe risolto.
+  if (usesTailwind(source)) {
+    const line = source.slice(0, source.search(/@(import|reference|tailwind)\s/)).split("\n").length;
+    throw new ThemeCompileError("Tailwind si usa solo nei fogli in styles/.", file, line, 1);
+  }
   const missing: { url: string; line: number; column: number }[] = [];
   try {
     const { code } = transform({
@@ -381,16 +387,33 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
     }
   }
 
-  // CSS: tutti i file in styles/, in ordine alfabetico, nel layer "theme".
+  // CSS: tutti i file in styles/, in ordine alfabetico, nel layer "theme". Quelli che importano
+  // "tailwindcss" passano prima da Tailwind, con le classi usate in tutto il tema.
   const imports: string[] = [];
   const styles: string[] = [];
+  // Preflight e @layer base di Tailwind: nel layer np.reset, sotto gli stili del core.
+  const resets: string[] = [];
+  let candidates: string[] | null = null;
   for (const file of files.filter((f) => f.startsWith("styles/") && f.endsWith(".css"))) {
     const resolveUrl = (url: string) => {
       if (/^(https?:|data:|#|\/)/i.test(url)) return url;
       const target = path.posix.normalize(path.posix.join(path.posix.dirname(file), url.replace(/[?#].*$/, "")));
       return assetUrls[target] ?? null;
     };
-    const result = compileCss(file, text(sources, file), resolveUrl);
+    const original = text(sources, file);
+    let result: ReturnType<typeof compileCss>;
+    if (usesTailwind(original)) {
+      candidates ??= scanCandidates(sources);
+      try {
+        const { base, rest } = splitBaseLayer(await compileTailwind(file, original, sources, candidates));
+        if (base) resets.push(compileCss(file, base, resolveUrl).css);
+        result = compileCss(file, rest, resolveUrl);
+      } catch (error) {
+        throw error instanceof ThemeCompileError ? locateInSource(error, original) : error;
+      }
+    } else {
+      result = compileCss(file, original, resolveUrl);
+    }
     imports.push(...result.imports.map((rule) => (/\blayer\b/.test(rule) ? rule : `${rule} layer(theme)`) + ";"));
     styles.push(result.css);
   }
@@ -440,9 +463,10 @@ export async function buildTheme(sources: ThemeSources): Promise<BuildResult> {
   let css: string | null = null;
   const tokens = tokensCss(manifest, parseTokenValues(sources, manifest));
   if (styles.length || tokens || overrides.length) {
+    const resetLayer = resets.length ? `@layer np.reset{${resets.join("")}}` : "";
     const overrideLayer = overrides.length ? `@layer np.overrides{${overrides.join("")}}` : "";
     const content = Buffer.from(
-      `${LAYER_ORDER}${imports.join("")}@layer theme{${tokens}${styles.join("")}}${overrideLayer}`,
+      `${LAYER_ORDER}${imports.join("")}${resetLayer}@layer theme{${tokens}${styles.join("")}}${overrideLayer}`,
     );
     const hash = hashOf(content);
     assets.push({ hash, mime: "text/css; charset=utf-8", content });
@@ -517,7 +541,13 @@ export async function lintThemeFile(file: string, source: string): Promise<Theme
         );
       }
     } else if (file === "theme.json") parseManifest(source);
-    else if (ext === ".css") compileCss(file, source, (url) => url);
+    else if (ext === ".css" && usesTailwind(source)) {
+      try {
+        compileCss(file, await compileTailwind(file, source, null, []), (url) => url);
+      } catch (error) {
+        throw error instanceof ThemeCompileError ? locateInSource(error, source) : error;
+      }
+    } else if (ext === ".css") compileCss(file, source, (url) => url);
     else if (ext === ".js" || ext === ".ts") {
       try {
         await esbuild.transform(source, { loader: ext === ".ts" ? "ts" : "js", sourcefile: file, logLevel: "silent" });
