@@ -176,3 +176,7 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 - Commenti.
 - Import da WordPress.
 - Sistema di plugin/hook.
+
+## Da valutare
+
+- **`@tailwindcss/typography` nei temi.** Oggi i temi non possono usare plugin Tailwind (`@plugin` eseguirebbe codice sul server), quindi niente classi `prose` per i contenuti. Si potrebbe offrire il plugin dal core: una whitelist di plugin installati con NodePress, caricati dal server e non dal tema (es. `@plugin "@tailwindcss/typography"` ammesso, tutto il resto rifiutato). Il pacchetto va spostato tra le dipendenze di runtime.
