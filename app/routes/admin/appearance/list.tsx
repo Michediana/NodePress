@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Form, Link, redirect, useNavigation } from "react-router";
 import { z } from "zod";
 import { requirePermission } from "~/.server/auth";
+import { previewUrl } from "~/.server/origins";
 import { can, type Permission } from "~/lib/roles";
 import { formToObject, handleUserErrors, parse, UserError } from "~/.server/forms";
 import { scaffoldTheme } from "~/.server/theme/scaffold";
@@ -75,10 +76,12 @@ import type { Route } from "./+types/list";
 export async function loader({ context }: Route.LoaderArgs) {
   const user = requirePermission(context, "themes.customize");
   const themes = await listThemes();
+  const previews = await Promise.all(themes.map((theme) => previewUrl(theme.name)));
   return {
     can: { code: can(user, "themes.code"), manage: can(user, "themes") },
-    themes: themes.map((theme) => ({
+    themes: themes.map((theme, i) => ({
       name: theme.name,
+      previewUrl: previews[i],
       label: theme.label,
       active: theme.active,
       published: theme.publishedBuildId !== null,
@@ -204,9 +207,7 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-48">
                     <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        render={<a href={`/?np_preview=${theme.name}`} target="_blank" rel="noreferrer" />}
-                      >
+                      <DropdownMenuItem render={<a href={theme.previewUrl} target="_blank" rel="noreferrer" />}>
                         <EyeIcon />
                         {t("appearance.preview")}
                       </DropdownMenuItem>

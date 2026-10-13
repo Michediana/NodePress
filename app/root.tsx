@@ -3,6 +3,7 @@ import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, 
 import type { Route } from "./+types/root";
 import { useNonce } from "./lib/csp";
 import { ensureMigrated } from "./.server/db";
+import { checkSameOrigin, routeByOrigin } from "./.server/origins";
 
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
@@ -11,8 +12,12 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export const middleware: Route.MiddlewareFunction[] = [
-  async () => {
+  async ({ request }) => {
+    // Protezione CSRF delle richieste di scrittura, poi smistamento tra sito e pannello (ADMIN_URL).
+    checkSameOrigin(request);
     await ensureMigrated();
+    const routed = await routeByOrigin(request);
+    if (routed) throw routed;
   },
 ];
 

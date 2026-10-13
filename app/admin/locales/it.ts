@@ -148,6 +148,11 @@ export const it = {
     publicApi: "API pubblica",
     publicApiHelp: "Se attiva, le API di lettura dei contenuti non richiedono una API key.",
     security: "Sicurezza",
+    siteUrlRequired: "Con il pannello su un'origine separata, l'URL pubblico del sito è obbligatorio.",
+    adminOrigin: "Origine del pannello",
+    adminOriginOn: "Il pannello è su un'origine separata dal sito:",
+    adminOriginOff:
+      "Il pannello sta sulla stessa origine del sito. In produzione è consigliato separarlo (es. admin.esempio.it) con la variabile d'ambiente ADMIN_URL: il JS del tema non potrà agire con la sessione del pannello.",
     csp: "Content Security Policy del sito",
     cspHelp:
       "Sul sito girano solo gli script di NodePress, del tema e del tracking (dopo il consenso). Gli script inseriti nei blocchi HTML dei contenuti vengono bloccati: per controllare cosa si romperebbe, usa \"Solo segnalazione\" e guarda la console del browser.",

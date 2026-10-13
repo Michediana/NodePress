@@ -13,7 +13,8 @@ const SESSION_DAYS = 30;
 
 export const sessionCookie = createCookie("np_session", {
   httpOnly: true,
-  sameSite: "lax",
+  // Strict: il cookie non parte mai da un altro sito, nemmeno seguendo un link.
+  sameSite: "strict",
   path: "/",
   secure: env.isProduction,
   secrets: [env.sessionSecret],

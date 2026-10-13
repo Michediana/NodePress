@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useBeforeUnload, useBlocker, useRevalidator } from "react-router";
 import { toast } from "sonner";
 import { requirePermission } from "~/.server/auth";
+import { env } from "~/.server/env";
+import { previewUrl } from "~/.server/origins";
 import { getSetting } from "~/.server/settings";
 import { getBuild, listFiles, requireTheme } from "~/.server/theme/store";
 import { t } from "~/admin/i18n";
@@ -60,6 +62,8 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     tokens: Object.keys(draft?.data.manifest.tokens ?? {}),
     // Dalla bozza: l'autocompletamento dei JSON segue le sezioni appena salvate.
     schemas: draft?.data.schemas ?? {},
+    // Con l'origine separata l'anteprima con JS gira sul sito pubblico, lontano dalla sessione del pannello.
+    publicPreview: env.adminUrl ? await previewUrl(theme.name) : null,
   };
 }
 
@@ -469,7 +473,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
 
         {/* Anteprima */}
         <aside className="hidden min-h-0 flex-col border-l xl:flex">
-          <Preview ref={preview} theme={theme.name} />
+          <Preview ref={preview} theme={theme.name} publicPreview={loaderData.publicPreview} />
         </aside>
       </div>
 

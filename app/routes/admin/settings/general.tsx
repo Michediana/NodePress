@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requirePermission } from "~/.server/auth";
-import { checkbox, formToObject, handleUserErrors, parse } from "~/.server/forms";
+import { env } from "~/.server/env";
+import { checkbox, formToObject, handleUserErrors, parse, UserError } from "~/.server/forms";
 import { getSettings, setSettings } from "~/.server/settings";
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
@@ -16,7 +17,7 @@ import type { Route } from "./+types/general";
 
 export async function loader({ context }: Route.LoaderArgs) {
   requirePermission(context, "settings");
-  return getSettings(["siteName", "siteUrl", "publicApi", "cspMode"]);
+  return { ...(await getSettings(["siteName", "siteUrl", "publicApi", "cspMode"])), adminUrl: env.adminUrl };
 }
 
 const schema = z.object({
@@ -36,6 +37,9 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { message: t("common.saved") };
     }
     const input = parse(schema, form);
+    // Con il pannello su un'origine separata serve sapere dove sta il sito, per i redirect e le anteprime.
+    if (env.adminUrl && !input.siteUrl)
+      throw new UserError(t("settings.siteUrlRequired"), 400, { siteUrl: t("settings.siteUrlRequired") });
     await setSettings({ ...input, siteUrl: input.siteUrl.replace(/\/+$/, "") });
     return { message: t("common.saved") };
   });
@@ -93,6 +97,18 @@ export default function GeneralSettings({ loaderData, actionData }: Route.Compon
               </SelectContent>
             </Select>
             <FieldDescription>{t("settings.cspHelp")}</FieldDescription>
+          </Field>
+          <Field>
+            <FieldLabel>{t("settings.adminOrigin")}</FieldLabel>
+            <FieldDescription>
+              {loaderData.adminUrl ? (
+                <>
+                  {t("settings.adminOriginOn")} <code>{loaderData.adminUrl}</code>
+                </>
+              ) : (
+                t("settings.adminOriginOff")
+              )}
+            </FieldDescription>
           </Field>
         </SettingsCard>
       </div>

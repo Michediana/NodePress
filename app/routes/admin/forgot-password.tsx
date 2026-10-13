@@ -3,6 +3,7 @@ import { Form, Link, useNavigation } from "react-router";
 import { createPasswordReset } from "~/.server/auth";
 import { db, schema } from "~/.server/db";
 import { isMailConfigured, sendMail } from "~/.server/mail";
+import { env } from "~/.server/env";
 import { getSiteUrl } from "~/.server/settings";
 import { AuthCard } from "~/admin/components/auth-card";
 import { TextField } from "~/admin/components/fields";
@@ -23,11 +24,13 @@ export async function loader() {
 
 export async function action({ request }: Route.ActionArgs) {
   const form = await request.formData();
-  const email = String(form.get("email") ?? "").trim().toLowerCase();
+  const email = String(form.get("email") ?? "")
+    .trim()
+    .toLowerCase();
   const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email));
   if (user) {
     const token = await createPasswordReset(user.id);
-    const url = `${await getSiteUrl(request)}/admin/reset-password/${token}`;
+    const url = `${env.adminUrl ?? (await getSiteUrl(request))}/admin/reset-password/${token}`;
     try {
       await sendMail({
         to: user.email,

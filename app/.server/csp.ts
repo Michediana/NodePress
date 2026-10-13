@@ -12,7 +12,22 @@ export function createNonce() {
   return randomBytes(16).toString("base64");
 }
 
-export function cspHeader(nonce: string, options: { mode: CspMode; dev: boolean; https: boolean }) {
+/**
+ * Il front servito sull'origine separata del pannello (solo nelle anteprime in iframe): nessuno script,
+ * qualunque sia la modalità scelta, perché lì il codice del tema avrebbe la sessione del pannello.
+ */
+export function adminOriginFrontCsp() {
+  return {
+    name: "Content-Security-Policy",
+    value:
+      "default-src 'self'; script-src 'none'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; media-src 'self' blob: https:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'self'",
+  };
+}
+
+export function cspHeader(
+  nonce: string,
+  options: { mode: CspMode; dev: boolean; https: boolean; adminUrl: string | null },
+) {
   if (options.mode === "off") return null;
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
@@ -28,8 +43,8 @@ export function cspHeader(nonce: string, options: { mode: CspMode; dev: boolean;
     "form-action": ["'self'", "https:"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
-    // Il front può stare in un iframe solo del sito stesso (anteprime del pannello).
-    "frame-ancestors": ["'self'"],
+    // Il front può stare in un iframe solo del sito stesso o del pannello (anteprime).
+    "frame-ancestors": ["'self'", ...(options.adminUrl ? [options.adminUrl] : [])],
     ...(options.https ? { "upgrade-insecure-requests": [] } : {}),
   };
   const value = Object.entries(directives)

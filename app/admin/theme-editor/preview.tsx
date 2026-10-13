@@ -16,14 +16,27 @@ type Viewport = keyof typeof VIEWPORTS;
  * Anteprima della bozza nel vero front SSR, in un iframe sandbox.
  * Di default gli script non girano (`allow-same-origin` senza `allow-scripts`): si vede l'HTML del
  * server con il CSS del tema e il codice del tema non può agire con la sessione del pannello.
- * Con "Esegui JS" l'iframe esegue anche gli script, come farebbe il sito pubblicato.
+ * Con "Esegui JS" l'iframe esegue anche gli script, come farebbe il sito pubblicato. Se il pannello ha
+ * un'origine separata (`publicPreview`), questa anteprima si apre sul sito pubblico con un token: il JS
+ * del tema non gira mai sull'origine del pannello.
  */
-export function Preview({ ref, theme }: { ref?: Ref<PreviewHandle>; theme: string }) {
+export function Preview({
+  ref,
+  theme,
+  publicPreview,
+}: {
+  ref?: Ref<PreviewHandle>;
+  theme: string;
+  /** URL dell'anteprima sull'origine pubblica (con token), oppure null se il pannello sta sulla stessa origine. */
+  publicPreview: string | null;
+}) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [path, setPath] = useState("/");
   const [input, setInput] = useState("/");
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [scripts, setScripts] = useState(false);
+  const [reloads, setReloads] = useState(0);
+  const remote = scripts && publicPreview !== null;
   // L'URL iniziale imposta il cookie di anteprima; le ricariche usano la posizione attuale dell'iframe.
   const [src, setSrc] = useState(`/?np_preview=${encodeURIComponent(theme)}`);
 
@@ -60,6 +73,11 @@ export function Preview({ ref, theme }: { ref?: Ref<PreviewHandle>; theme: strin
 
   // Prima rinnova il cookie dell'anteprima (scade dopo 30 minuti), poi ricarica dove si trova l'iframe.
   const reload = async () => {
+    if (remote) {
+      // Iframe su un'altra origine: non si può ricaricare da qui, si rimonta.
+      setReloads((n) => n + 1);
+      return;
+    }
     await fetch(`/?np_preview=${encodeURIComponent(theme)}`, { redirect: "manual", credentials: "same-origin" }).catch(
       () => {},
     );
@@ -70,7 +88,15 @@ export function Preview({ ref, theme }: { ref?: Ref<PreviewHandle>; theme: strin
     }
   };
 
-  useImperativeHandle(ref, () => ({ reload }), [theme]);
+  useImperativeHandle(ref, () => ({ reload }), [theme, remote]);
+
+  /** Lo stesso percorso sull'origine pubblica, con i parametri dell'anteprima (tema e token). */
+  const publicSrc = (target: string) => {
+    const base = new URL(publicPreview!);
+    const url = new URL(target, base.origin);
+    for (const [key, value] of base.searchParams) url.searchParams.set(key, value);
+    return url.href;
+  };
 
   const go = (target: string) => {
     const clean = target.startsWith("/") ? target : `/${target}`;
@@ -115,7 +141,9 @@ export function Preview({ ref, theme }: { ref?: Ref<PreviewHandle>; theme: strin
                 variant="ghost"
                 size="icon-sm"
                 nativeButton={false}
-                render={<a href={`${currentPath()}`} target="_blank" rel="noreferrer" />}
+                render={
+                  <a href={publicPreview ? publicSrc(currentPath()) : currentPath()} target="_blank" rel="noreferrer" />
+                }
                 aria-label={t("appearance.editor.openPreview")}
               />
             }
@@ -158,9 +186,9 @@ export function Preview({ ref, theme }: { ref?: Ref<PreviewHandle>; theme: strin
       </div>
       <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-muted/40">
         <iframe
-          key={scripts ? "scripts" : "static"}
+          key={`${scripts ? "scripts" : "static"}-${reloads}`}
           ref={frame}
-          src={src}
+          src={remote ? publicSrc(src) : src}
           title={t("appearance.editor.previewTitle")}
           sandbox={scripts ? "allow-same-origin allow-scripts allow-forms" : "allow-same-origin"}
           className="h-full border-0 bg-white"

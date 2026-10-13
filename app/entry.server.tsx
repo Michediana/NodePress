@@ -8,7 +8,8 @@ import type { RenderToPipeableStreamOptions } from "react-dom/server";
 import { renderToPipeableStream } from "react-dom/server";
 import type { EntryContext, RouterContextProvider } from "react-router";
 import { ServerRouter } from "react-router";
-import { cspHeader, createNonce } from "~/.server/csp";
+import { adminOriginFrontCsp, cspHeader, createNonce } from "~/.server/csp";
+import { isAdminHost } from "~/.server/origins";
 import { env } from "~/.server/env";
 import { getSetting } from "~/.server/settings";
 import { NonceContext, type CspMode } from "~/lib/csp";
@@ -40,9 +41,18 @@ export default async function handleRequest(
   }
 
   let nonce: string | undefined;
-  if (isFront(request)) {
+  if (isFront(request) && isAdminHost(request)) {
+    const header = adminOriginFrontCsp();
+    responseHeaders.set(header.name, header.value);
+    responseHeaders.set("X-Robots-Tag", "noindex");
+  } else if (isFront(request)) {
     const candidate = createNonce();
-    const header = cspHeader(candidate, { mode: await cspMode(), dev: !env.isProduction, https: env.isProduction });
+    const header = cspHeader(candidate, {
+      mode: await cspMode(),
+      dev: !env.isProduction,
+      https: env.isProduction,
+      adminUrl: env.adminUrl,
+    });
     if (header) {
       nonce = candidate;
       responseHeaders.set(header.name, header.value);

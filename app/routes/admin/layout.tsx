@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Form, Link, NavLink, Outlet, redirect, useLocation } from "react-router";
 import { getSessionUser, needsSetup, userContext } from "~/.server/auth";
+import { frontBaseUrl } from "~/.server/origins";
 import { getSiteLanguages } from "~/.server/languages";
 import { getSetting } from "~/.server/settings";
 import { Logo } from "~/admin/components/logo";
@@ -64,7 +65,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 export async function loader({ context }: Route.LoaderArgs) {
   const user = context.get(userContext)!;
   const [siteName, langs] = await Promise.all([getSetting("siteName"), getSiteLanguages()]);
-  return { user, siteName, langs, lang: "it" };
+  return { user, siteName, langs, lang: "it", siteUrl: (await frontBaseUrl()) + "/" };
 }
 
 export function meta() {
@@ -132,7 +133,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           <SidebarHeader>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton size="lg" render={<Link to="/" target="_blank" />}>
+                <SidebarMenuButton size="lg" render={<a href={loaderData.siteUrl} target="_blank" rel="noreferrer" />}>
                   <Logo className="size-8!" />
                   <div className="flex min-w-0 flex-col leading-tight">
                     <span className="truncate font-medium">{siteName}</span>

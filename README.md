@@ -191,6 +191,19 @@ Le pagine del front vengono servite con una CSP che ha un nonce nuovo a ogni ric
 
 In **Impostazioni → Generali → Sicurezza** la policy si può mettere in "Solo segnalazione", che segnala le violazioni nella console del browser senza bloccare nulla, oppure disattivare. Nei componenti del front, ogni `<script>` va scritto con `nonce={useNonce()}` (da `~/lib/csp`).
 
+## Origine separata per il pannello
+
+Facoltativa, consigliata in produzione. Con `ADMIN_URL=https://admin.esempio.it` nell'ambiente, il pannello vive su un'origine diversa dal sito, e il codice del tema non può più agire con la sessione di chi lo amministra.
+
+- `www.esempio.it/admin/…` viene rediretto su `admin.esempio.it/admin/…`.
+- Su `admin.esempio.it` si servono pannello, API, media e asset dei temi. Le pagine del sito si vedono solo dentro gli iframe di anteprima, senza script (`script-src 'none'`, `noindex`); aperte direttamente vengono redirette al sito pubblico. `robots.txt` blocca tutto.
+- L'anteprima "con JS" dell'editor del codice e il link "Anteprima" dei temi si aprono sul sito pubblico con un token firmato, che vale 30 minuti. Il sito pubblico ammette come cornice solo sé stesso e l'origine del pannello.
+- L'URL pubblico del sito (Impostazioni → Generali) diventa obbligatorio. I link delle email di reset password puntano all'origine del pannello.
+
+Pannello e sito vanno messi su sottodomini dello stesso dominio (`admin.` e `www.`): su domini diversi il cookie dell'anteprima non arriva nell'iframe e l'anteprima con JS mostra il tema pubblicato.
+
+Valgono anche senza origine separata: il cookie di sessione è `HttpOnly` + `SameSite=Strict`, e le richieste di scrittura al pannello devono arrivare dalla stessa origine (`Origin`/`Sec-Fetch-Site`). Con `Strict`, chi arriva al pannello da un link esterno (per esempio da un'email) vede il login finché non ricarica la pagina.
+
 ## Produzione
 
 ```bash

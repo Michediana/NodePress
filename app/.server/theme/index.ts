@@ -6,16 +6,17 @@ import { collectionItems, loadMediaMap, resolveCollectionId } from "../front";
 import { defaultTemplates, templateList, type TemplateKind, type ThemeBuildData } from "~/lib/theme/manifest";
 import { can } from "~/lib/roles";
 import { getSessionUser } from "../auth";
+import { createPreviewToken, PREVIEW_TTL, verifyPreviewToken } from "../origins";
 import { ensureActiveTheme, findTheme, getBuild } from "./store";
 
-// Tema usato dal front: la build pubblicata del tema attivo oppure, per un admin in anteprima,
+// Tema usato dal front: la build pubblicata del tema attivo oppure, per chi ha un token di anteprima,
 // la bozza di un tema qualsiasi. Le build sono immutabili, quindi si tengono in cache per id.
 
 export type FrontTheme = { name: string; buildId: number; data: ThemeBuildData; preview: boolean };
 
 // A scadenza: se l'editor si chiude senza disattivarla, l'anteprima non resta attiva a lungo.
 // L'editor la rinnova a ogni ricarica.
-const previewCookie = createCookie("np_preview", { path: "/", httpOnly: true, sameSite: "lax", maxAge: 30 * 60 });
+const previewCookie = createCookie("np_preview", { path: "/", httpOnly: true, sameSite: "lax", maxAge: PREVIEW_TTL });
 
 const MAX_CACHED_BUILDS = 32;
 const buildCache = new Map<number, ThemeBuildData>();
@@ -35,27 +36,36 @@ async function loadBuild(id: number) {
 }
 
 /**
- * `?np_preview=<tema>` attiva l'anteprima della bozza (per chi può modificare i temi), `?np_preview=off` la chiude.
- * Restituisce il redirect da lanciare, oppure null.
+ * `?np_preview=<tema>` attiva l'anteprima della bozza, `?np_preview=off` la chiude.
+ * L'anteprima è un token firmato salvato in un cookie: lo crea qui la sessione di chi può modificare i
+ * temi, oppure arriva già pronto in `np_token` (link dal pannello verso l'origine pubblica, dove la
+ * sessione non c'è). Restituisce il redirect da lanciare, oppure null.
  */
 export async function previewRedirect(request: Request) {
   const url = new URL(request.url);
   const value = url.searchParams.get("np_preview");
   if (value === null) return null;
+  const given = url.searchParams.get("np_token");
   url.searchParams.delete("np_preview");
+  url.searchParams.delete("np_token");
   const target = url.pathname + url.search;
-  const user = await getSessionUser(request);
-  if (value === "off" || value === "" || !user || !can(user, "themes.customize")) {
-    return redirect(target, { headers: { "Set-Cookie": await previewCookie.serialize("", { maxAge: 0 }) } });
+  let token: string | null = null;
+  if (value && value !== "off") {
+    if (given) token = verifyPreviewToken(given) === value ? given : null;
+    else {
+      const user = await getSessionUser(request);
+      if (user && can(user, "themes.customize")) token = createPreviewToken(value);
+    }
   }
-  return redirect(target, { headers: { "Set-Cookie": await previewCookie.serialize(value) } });
+  const cookie = token ? await previewCookie.serialize(token) : await previewCookie.serialize("", { maxAge: 0 });
+  return redirect(target, { headers: { "Set-Cookie": cookie } });
 }
 
 export async function getFrontTheme(request: Request): Promise<FrontTheme> {
-  const preview = await previewCookie.parse(request.headers.get("Cookie"));
-  if (typeof preview === "string" && preview) {
-    const user = await getSessionUser(request);
-    const theme = user && can(user, "themes.customize") ? await findTheme(preview) : null;
+  const token = await previewCookie.parse(request.headers.get("Cookie"));
+  const preview = typeof token === "string" && token ? verifyPreviewToken(token) : null;
+  if (preview) {
+    const theme = await findTheme(preview);
     if (theme?.draftBuildId) {
       return {
         name: theme.name,
