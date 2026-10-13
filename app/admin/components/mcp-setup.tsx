@@ -1,4 +1,4 @@
-import { BotIcon, CopyIcon } from "lucide-react";
+import { AppWindowIcon, BotIcon, BracesIcon, CopyIcon, TerminalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
@@ -66,9 +66,18 @@ export function McpSetup({ url, apiKey }: { url: string; apiKey?: string | null 
         </Field>
         <Tabs defaultValue="claude-ai">
           <TabsList>
-            <TabsTrigger value="claude-ai">claude.ai / Desktop</TabsTrigger>
-            <TabsTrigger value="claude-code">Claude Code</TabsTrigger>
-            <TabsTrigger value="json">{t("mcp.otherClients")}</TabsTrigger>
+            <TabsTrigger value="claude-ai">
+              <AppWindowIcon data-icon="inline-start" />
+              claude.ai / Desktop
+            </TabsTrigger>
+            <TabsTrigger value="claude-code">
+              <TerminalIcon data-icon="inline-start" />
+              Claude Code
+            </TabsTrigger>
+            <TabsTrigger value="json">
+              <BracesIcon data-icon="inline-start" />
+              {t("mcp.otherClients")}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="claude-ai" className="flex flex-col gap-3">
             <p className="text-muted-foreground">{t("mcp.claudeAiHelp")}</p>

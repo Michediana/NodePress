@@ -1,5 +1,5 @@
 import { PlusIcon, StarIcon, TrashIcon } from "lucide-react";
-import { Form, useNavigation } from "react-router";
+import { Form, useNavigation, useSubmit } from "react-router";
 import { requirePermission } from "~/.server/auth";
 import { handleUserErrors, UserError } from "~/.server/forms";
 import { addLanguage, getLanguages, removeLanguage, setDefaultLanguage } from "~/.server/languages";
@@ -7,6 +7,7 @@ import { LanguageSelect } from "~/admin/components/language-select";
 import { PageHeader } from "~/admin/components/page-header";
 import { SettingsNav } from "~/admin/components/settings-nav";
 import { useActionToast } from "~/admin/feedback";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { LanguageLabel } from "~/components/language-flag";
 import { Badge } from "~/components/ui/badge";
@@ -53,6 +54,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function LanguagesSettings({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
+  const submit = useSubmit();
   const navigation = useNavigation();
   const { languages } = loaderData;
   return (
@@ -103,8 +105,10 @@ export default function LanguagesSettings({ loaderData, actionData }: Route.Comp
                           </Form>
                           <Form
                             method="post"
-                            onSubmit={(e) => {
-                              if (!confirm(t("languages.confirmRemove"))) e.preventDefault();
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              if (await confirmDialog({ description: t("languages.confirmRemove"), confirmLabel: t("common.deactivate"), destructive: true }))
+                                submit({ intent: "remove", code: lang.code }, { method: "post" });
                             }}
                           >
                             <input type="hidden" name="code" value={lang.code} />

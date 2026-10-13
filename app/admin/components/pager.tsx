@@ -1,3 +1,4 @@
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
@@ -17,10 +18,12 @@ export function Pager({ page, total, perPage }: { page: number; total: number; p
       <span className="text-sm text-muted-foreground">{t("common.pageOf", { page, pages })}</span>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={page <= 1} nativeButton={false} render={<Link to={href(page - 1)} />}>
+          <ChevronLeftIcon data-icon="inline-start" />
           {t("common.previous")}
         </Button>
         <Button variant="outline" size="sm" disabled={page >= pages} nativeButton={false} render={<Link to={href(page + 1)} />}>
           {t("common.next")}
+          <ChevronRightIcon data-icon="inline-end" />
         </Button>
       </div>
     </div>

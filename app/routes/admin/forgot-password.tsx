@@ -1,3 +1,4 @@
+import { ArrowLeftIcon, SendIcon } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { Form, Link, useNavigation } from "react-router";
 import { createPasswordReset } from "~/.server/auth";
@@ -70,10 +71,11 @@ export default function ForgotPassword({ loaderData, actionData }: Route.Compone
           )}
           <TextField name="email" type="email" label={t("users.email")} required autoComplete="email" />
           <Button type="submit" disabled={busy || !loaderData.mailConfigured}>
-            {busy && <Spinner data-icon="inline-start" />}
+            {busy ? <Spinner data-icon="inline-start" /> : <SendIcon data-icon="inline-start" />}
             {t("forgot.submit")}
           </Button>
           <Button variant="link" nativeButton={false} render={<Link to="/admin/login" />}>
+            <ArrowLeftIcon data-icon="inline-start" />
             {t("forgot.back")}
           </Button>
         </FieldGroup>

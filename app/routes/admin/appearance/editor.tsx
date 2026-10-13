@@ -1,13 +1,17 @@
 import {
   ArrowLeftIcon,
-  PaintbrushIcon,
   CircleAlertIcon,
   FilePlusIcon,
+  PaintbrushIcon,
+  PencilIcon,
+  RocketIcon,
   SaveIcon,
+  TrashIcon,
   UploadIcon,
   XIcon,
+  type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Link, useBeforeUnload, useBlocker, useRevalidator } from "react-router";
 import { toast } from "sonner";
 import { requirePermission } from "~/.server/auth";
@@ -15,6 +19,8 @@ import { env } from "~/.server/env";
 import { previewUrl } from "~/.server/origins";
 import { getSetting } from "~/.server/settings";
 import { getBuild, listFiles, requireTheme } from "~/.server/theme/store";
+import { confirmDialog } from "~/admin/components/dialogs";
+import { readPanelLayouts, usePanelLayout } from "~/admin/panel-layout";
 import { t } from "~/admin/i18n";
 import { CodeEditor, type CodeEditorHandle, type EditorError } from "~/admin/theme-editor/code-editor";
 import { FileTree } from "~/admin/theme-editor/file-tree";
@@ -35,6 +41,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { FieldGroup } from "~/components/ui/field";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "~/components/ui/resizable";
 import { Spinner } from "~/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { formatBytes } from "~/lib/media";
@@ -42,7 +49,7 @@ import { isImageFile, isTextFile } from "~/lib/theme/files";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/editor";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ request, params, context }: Route.LoaderArgs) {
   requirePermission(context, "themes.code");
   const theme = await requireTheme(params.name);
   const [files, active, draft] = await Promise.all([
@@ -64,6 +71,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     schemas: draft?.data.schemas ?? {},
     // Con l'origine separata l'anteprima con JS gira sul sito pubblico, lontano dalla sessione del pannello.
     publicPreview: env.adminUrl ? await previewUrl(theme.name) : null,
+    layouts: readPanelLayouts(request, "theme-editor"),
   };
 }
 
@@ -80,6 +88,20 @@ function starter(path: string) {
   if (path.endsWith(".js") || path.endsWith(".ts"))
     return "// Gira solo nel browser: per l'interattività usa i custom element.\n";
   return "";
+}
+
+const wideQuery = "(min-width: 1280px)";
+/** L'anteprima ha senso solo su schermi larghi (breakpoint xl). */
+function useWide() {
+  return useSyncExternalStore(
+    (notify) => {
+      const mql = window.matchMedia(wideQuery);
+      mql.addEventListener("change", notify);
+      return () => mql.removeEventListener("change", notify);
+    },
+    () => window.matchMedia(wideQuery).matches,
+    () => true,
+  );
 }
 
 export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
@@ -123,8 +145,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
   );
   useEffect(() => {
     if (blocker.state !== "blocked") return;
-    if (window.confirm(t("appearance.editor.unsavedLeave"))) blocker.proceed();
-    else blocker.reset();
+    confirmDialog({ description: t("appearance.editor.unsavedLeave") }).then((ok) => (ok ? blocker.proceed() : blocker.reset()));
   }, [blocker]);
 
   const post = async (body: unknown): Promise<Outcome> => {
@@ -161,8 +182,8 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
     setActive(path);
   };
 
-  const closeTab = (path: string) => {
-    if (dirty[path] && !window.confirm(t("appearance.editor.unsavedLeave"))) return;
+  const closeTab = async (path: string) => {
+    if (dirty[path] && !(await confirmDialog({ description: t("appearance.editor.unsavedLeave") }))) return;
     editor.current?.dispose(path);
     setDirty((d) => ({ ...d, [path]: false }));
     setTabs((list) => {
@@ -262,6 +283,12 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
   const buildError = theme.buildError;
   const shownError = (active && lint[active]) || (buildError && buildError.file === active ? buildError : null);
   const activeFile = files.find((f) => f.path === active);
+  const wide = useWide();
+  const layout = usePanelLayout(
+    "theme-editor",
+    loaderData.layouts,
+    wide ? ["files", "code", "preview"] : ["files", "code"],
+  );
 
   return (
     <div className="-m-4 flex h-[calc(100svh-3rem)] min-h-0 flex-col md:-m-6">
@@ -298,14 +325,20 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
             onClick={() => setDialog({ type: "publish" })}
             disabled={!theme.unpublished || Boolean(buildError)}
           >
+            <RocketIcon data-icon="inline-start" />
             {t("appearance.publish")}
           </Button>
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_minmax(380px,40%)]">
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="min-h-0 flex-1"
+        defaultLayout={layout.defaultLayout}
+        onLayoutChanged={layout.onLayoutChanged}
+      >
         {/* File */}
-        <aside className="flex min-h-0 flex-col border-r">
+        <ResizablePanel id="files" defaultSize={220} minSize={160} maxSize="40%" className="flex min-h-0 flex-col">
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               {t("appearance.editor.files")}
@@ -367,10 +400,12 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
               if (file) onUpload(file);
             }}
           />
-        </aside>
+        </ResizablePanel>
+
+        <ResizableHandle />
 
         {/* Codice */}
-        <section className="flex min-h-0 min-w-0 flex-col">
+        <ResizablePanel id="code" minSize={320} className="flex min-h-0 min-w-0 flex-col">
           <div className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b bg-muted/30">
             {tabs.map((path) => (
               <div
@@ -469,17 +504,23 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
               </span>
             </button>
           )}
-        </section>
+        </ResizablePanel>
 
         {/* Anteprima */}
-        <aside className="hidden min-h-0 flex-col border-l xl:flex">
-          <Preview ref={preview} theme={theme.name} publicPreview={loaderData.publicPreview} />
-        </aside>
-      </div>
+        {wide && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel id="preview" defaultSize="40%" minSize={320} className="flex min-h-0 flex-col">
+              <Preview ref={preview} theme={theme.name} publicPreview={loaderData.publicPreview} />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
 
       <FileDialog
         open={dialog?.type === "new"}
         title={t("appearance.editor.newFile")}
+        icon={FilePlusIcon}
         label={t("appearance.editor.newFilePath")}
         description={t("appearance.editor.newFilePathHelp")}
         initial="components/"
@@ -489,6 +530,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
       <FileDialog
         open={dialog?.type === "rename"}
         title={t("appearance.editor.rename")}
+        icon={PencilIcon}
         label={t("appearance.editor.renamePath")}
         initial={dialog?.type === "rename" ? dialog.path : ""}
         onClose={() => setDialog(null)}
@@ -512,13 +554,20 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
             )}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>
+              <XIcon data-icon="inline-start" />
+              {t("common.cancel")}
+            </AlertDialogCancel>
             {dialog?.type === "delete" ? (
               <AlertDialogAction variant="destructive" onClick={() => deleteFile(dialog.path)}>
+                <TrashIcon data-icon="inline-start" />
                 {t("common.delete")}
               </AlertDialogAction>
             ) : (
-              <AlertDialogAction onClick={publish}>{t("appearance.publish")}</AlertDialogAction>
+              <AlertDialogAction onClick={publish}>
+                <RocketIcon data-icon="inline-start" />
+                {t("appearance.publish")}
+              </AlertDialogAction>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -530,6 +579,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
 function FileDialog({
   open,
   title,
+  icon: Icon,
   label,
   description,
   initial,
@@ -538,6 +588,7 @@ function FileDialog({
 }: {
   open: boolean;
   title: string;
+  icon: LucideIcon;
   label: string;
   description?: string;
   initial: string;
@@ -571,7 +622,10 @@ function FileDialog({
             />
           </FieldGroup>
           <DialogFooter>
-            <Button type="submit">{title}</Button>
+            <Button type="submit">
+              <Icon data-icon="inline-start" />
+              {title}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

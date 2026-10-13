@@ -1,3 +1,4 @@
+import { KeyRoundIcon, LogInIcon } from "lucide-react";
 import { Form, Link, redirect, useNavigation, useSearchParams } from "react-router";
 import { createUserSession, getSessionUser, login, needsSetup } from "~/.server/auth";
 import { AuthCard } from "~/admin/components/auth-card";
@@ -53,10 +54,11 @@ export default function Login({ actionData }: Route.ComponentProps) {
           <TextField name="email" type="email" label={t("users.email")} required autoComplete="email" autoFocus />
           <TextField name="password" type="password" label={t("users.password")} required autoComplete="current-password" />
           <Button type="submit" disabled={busy}>
-            {busy && <Spinner data-icon="inline-start" />}
+            {busy ? <Spinner data-icon="inline-start" /> : <LogInIcon data-icon="inline-start" />}
             {t("login.submit")}
           </Button>
           <Button variant="link" nativeButton={false} render={<Link to="/admin/forgot-password" />}>
+            <KeyRoundIcon data-icon="inline-start" />
             {t("login.forgot")}
           </Button>
         </FieldGroup>

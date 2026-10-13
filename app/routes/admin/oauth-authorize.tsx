@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BotIcon, PaletteIcon, ShieldIcon, TriangleAlertIcon } from "lucide-react";
+import { BotIcon, CheckIcon, PaletteIcon, ShieldIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import { Form, redirect, useNavigation } from "react-router";
 import { getSessionUser } from "~/.server/auth";
 import {
@@ -25,10 +25,13 @@ export function meta() {
 }
 
 // La pagina di consenso non si incornicia: un sito esterno potrebbe far cliccare "Consenti" di nascosto.
+// Referrer solo verso la stessa origine: l'URL con state e PKCE non arriva all'applicazione, mentre il
+// POST del consenso porta ancora l'Origin vero (con no-referrer il browser invia "Origin: null" e il
+// controllo CSRF di React Router risponde 400).
 export const headers = () => ({
   "X-Frame-Options": "DENY",
   "Content-Security-Policy": "frame-ancestors 'none'",
-  "Referrer-Policy": "no-referrer",
+  "Referrer-Policy": "same-origin",
 });
 
 const BOUNCE = "np_bounce";
@@ -202,11 +205,12 @@ export default function OAuthAuthorize({ loaderData, actionData }: Route.Compone
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button type="submit" name="decision" value="deny" variant="outline" disabled={busy}>
+            <XIcon data-icon="inline-start" />
             {t("oauth.deny")}
           </Button>
           {scopes.length > 0 && (
             <Button type="submit" name="decision" value="allow" disabled={busy}>
-              {busy && <Spinner data-icon="inline-start" />}
+              {busy ? <Spinner data-icon="inline-start" /> : <CheckIcon data-icon="inline-start" />}
               {t("oauth.allow")}
             </Button>
           )}

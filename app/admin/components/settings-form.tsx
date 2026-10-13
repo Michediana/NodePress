@@ -1,3 +1,4 @@
+import { SaveIcon } from "lucide-react";
 import { Form, useNavigation } from "react-router";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
@@ -33,7 +34,7 @@ export function SettingsCard({
         </CardContent>
         <CardFooter>
           <Button type="submit" name="intent" value={intent} disabled={busy}>
-            {busy && <Spinner data-icon="inline-start" />}
+            {busy ? <Spinner data-icon="inline-start" /> : <SaveIcon data-icon="inline-start" />}
             {submitLabel ?? t("common.save")}
           </Button>
         </CardFooter>

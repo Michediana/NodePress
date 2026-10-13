@@ -84,6 +84,7 @@ function ImageView({ node, updateAttributes, deleteNode, selected }: ReactNodeVi
           />
         </div>
         <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => setPicker(true)}>
+          <ImageIcon data-icon="inline-start" />
           {t("editor.replaceImage")}
         </Button>
       </div>

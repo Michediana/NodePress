@@ -1,3 +1,4 @@
+import { LayoutDashboardIcon } from "lucide-react";
 import { isRouteErrorResponse, Link, Outlet } from "react-router";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
@@ -33,6 +34,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       </EmptyHeader>
       <EmptyContent>
         <Button nativeButton={false} render={<Link to="/admin" />}>
+          <LayoutDashboardIcon data-icon="inline-start" />
           {t("nav.dashboard")}
         </Button>
       </EmptyContent>

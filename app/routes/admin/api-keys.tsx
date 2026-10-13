@@ -14,6 +14,7 @@ import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast } from "~/admin/feedback";
 import { IconLabel } from "~/admin/components/icon-label";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
@@ -123,7 +124,10 @@ export default function ApiKeys({ loaderData, actionData }: Route.ComponentProps
                         variant="ghost"
                         size="icon-sm"
                         aria-label={t("apiKeys.revoke")}
-                        onClick={() => confirm(t("apiKeys.confirmRevoke")) && submit({ intent: "delete", id: String(key.id) }, { method: "post" })}
+                        onClick={async () => {
+                          if (await confirmDialog({ description: t("apiKeys.confirmRevoke"), confirmLabel: t("apiKeys.revoke"), destructive: true }))
+                            submit({ intent: "delete", id: String(key.id) }, { method: "post" });
+                        }}
                       >
                         <TrashIcon />
                       </Button>
@@ -162,6 +166,7 @@ export default function ApiKeys({ loaderData, actionData }: Route.ComponentProps
                   <FieldDescription>{t("apiKeys.scopeHelp")}</FieldDescription>
                 </Field>
                 <Button type="submit" name="intent" value="create">
+                  <KeyRoundIcon data-icon="inline-start" />
                   {t("apiKeys.create")}
                 </Button>
               </FieldGroup>

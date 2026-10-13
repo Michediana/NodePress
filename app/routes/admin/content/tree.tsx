@@ -8,6 +8,7 @@ import { nodeIcon } from "~/admin/components/node-icon";
 import { PageHeader } from "~/admin/components/page-header";
 import { TranslationBadges } from "~/admin/components/translation-badges";
 import { useActionToast } from "~/admin/feedback";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -119,8 +120,9 @@ function TreeRow({ node, depth, langs, canManage, isFirst, isLast }: { node: Row
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     variant="destructive"
-                    onClick={() => {
-                      if (confirm(t("content.confirmDelete"))) act("delete");
+                    onClick={async () => {
+                      if (await confirmDialog({ description: t("content.confirmDelete"), confirmLabel: t("common.delete"), destructive: true }))
+                        act("delete");
                     }}
                   >
                     <TrashIcon />
@@ -168,6 +170,7 @@ export default function ContentTree({ loaderData, actionData }: Route.ComponentP
           </EmptyHeader>
           <EmptyContent>
             <Button nativeButton={false} render={<Link to="/admin/content/new" />}>
+              <FilePlusIcon data-icon="inline-start" />
               {t("content.newPage")}
             </Button>
           </EmptyContent>

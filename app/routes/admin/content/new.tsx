@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { ListTreeIcon } from "lucide-react";
+import { ListTreeIcon, PlusIcon } from "lucide-react";
 import { Form, redirect, useNavigation, useSearchParams } from "react-router";
 import { useState } from "react";
 import { z } from "zod";
@@ -225,7 +225,7 @@ export default function NewContent({ loaderData, actionData }: Route.ComponentPr
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={navigation.state !== "idle"}>
-              {navigation.state !== "idle" && <Spinner data-icon="inline-start" />}
+              {navigation.state !== "idle" ? <Spinner data-icon="inline-start" /> : <PlusIcon data-icon="inline-start" />}
               {t("content.create")}
             </Button>
           </CardFooter>

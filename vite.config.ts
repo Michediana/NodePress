@@ -36,6 +36,7 @@ export default defineConfig({
       "class-variance-authority",
       "clsx",
       "lucide-react",
+      "react-resizable-panels",
       "sonner",
       "tailwind-merge",
     ],

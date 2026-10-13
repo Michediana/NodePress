@@ -3,18 +3,27 @@ import {
   CircleAlertIcon,
   CodeIcon,
   HistoryIcon,
+  LayersIcon,
+  Maximize2Icon,
+  Minimize2Icon,
   MonitorIcon,
   MousePointerClickIcon,
+  MoveHorizontalIcon,
+  PaletteIcon,
   Redo2Icon,
+  RocketIcon,
   SmartphoneIcon,
   TabletIcon,
   Undo2Icon,
+  XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useBeforeUnload, useBlocker, useRevalidator } from "react-router";
 import { toast } from "sonner";
 import type { CollectionOption } from "~/admin/components/section-settings";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
+import { type PanelLayouts, usePanelLayout } from "~/admin/panel-layout";
 import { MiniCode } from "~/admin/theme-editor/mini-code";
 import {
   AlertDialog,
@@ -28,12 +37,14 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "~/components/ui/resizable";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Spinner } from "~/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import type { ThemeToken } from "~/lib/theme/manifest";
+import { cn } from "~/lib/utils";
 import type { SectionSchema } from "~/lib/theme/sections";
 import type { EditorError as ThemeBuildError } from "~/admin/theme-editor/code-editor";
 import { Canvas, type CanvasHandle, type Viewport } from "./canvas";
@@ -75,6 +86,7 @@ export type VisualEditorData = {
   languages: string[];
   collections: CollectionOption[];
   builds: { id: number; publishedAt: string }[];
+  layouts: PanelLayouts;
 };
 
 const SAVE_DELAY = 700;
@@ -95,6 +107,7 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
   const api = `/admin/appearance/${theme.name}/api`;
   const revalidator = useRevalidator();
   const canvas = useRef<CanvasHandle>(null);
+  const layout = usePanelLayout("visual-editor", data.layouts, ["panel", "canvas", "inspector"]);
 
   const initial = useMemo<EditorDoc>(
     () => ({
@@ -116,6 +129,22 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
   const template = data.templates.find((tpl) => tpl.name === templateName) ?? null;
   const [path, setPath] = useState(template?.path ?? "/");
   const [viewport, setViewport] = useState<Viewport>("desktop");
+  // Anteprima a tutta finestra (selezione ed evidenziazione restano attive), e a schermo intero
+  // vero dove il browser lo concede. Esc o l'uscita dallo schermo intero la chiudono.
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    if (!fullscreen) return;
+    document.documentElement.requestFullscreen?.().catch(() => {});
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setFullscreen(false);
+    const onChange = () => !document.fullscreenElement && setFullscreen(false);
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("fullscreenchange", onChange);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    };
+  }, [fullscreen]);
   const [selected, setSelected] = useState<{ file: string; id: string } | null>(null);
   const [tab, setTab] = useState("sections");
   const [status, setStatus] = useState<"saved" | "pending" | "saving">("saved");
@@ -183,8 +212,7 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
   );
   useEffect(() => {
     if (blocker.state !== "blocked") return;
-    if (window.confirm(t("visual.leaveWhileSaving"))) blocker.proceed();
-    else blocker.reset();
+    confirmDialog({ description: t("visual.leaveWhileSaving") }).then((ok) => (ok ? blocker.proceed() : blocker.reset()));
   }, [blocker]);
 
   // --- Annulla / ripeti da tastiera (non dentro i campi di testo o Monaco). ---
@@ -281,7 +309,20 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
             <ToggleGroupItem value="desktop" aria-label={t("appearance.editor.desktop")}>
               <MonitorIcon />
             </ToggleGroupItem>
+            <ToggleGroupItem value="full" aria-label={t("visual.fullWidth")}>
+              <MoveHorizontalIcon />
+            </ToggleGroupItem>
           </ToggleGroup>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button variant="ghost" size="icon-sm" onClick={() => setFullscreen(true)} aria-label={t("visual.fullscreen")} />
+              }
+            >
+              <Maximize2Icon />
+            </TooltipTrigger>
+            <TooltipContent>{t("visual.fullscreen")}</TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="ml-auto flex items-center gap-1">
@@ -340,19 +381,34 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
             </Tooltip>
           )}
           <Button size="sm" className="ml-1" onClick={() => setDialog("publish")} disabled={dirty}>
+            <RocketIcon data-icon="inline-start" />
             {t("appearance.publish")}
           </Button>
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)_320px]">
+      <ResizablePanelGroup
+        orientation="horizontal"
+        className="min-h-0 flex-1"
+        defaultLayout={layout.defaultLayout}
+        onLayoutChanged={layout.onLayoutChanged}
+      >
         {/* Pannello sinistro: sezioni, stile, CSS */}
-        <aside className="flex min-h-0 flex-col border-r">
+        <ResizablePanel id="panel" defaultSize={280} minSize={240} maxSize="40%" className="flex min-h-0 flex-col">
           <Tabs value={tab} onValueChange={(v) => setTab(String(v))} className="flex min-h-0 flex-1 flex-col gap-0">
             <TabsList className="m-2 grid grid-cols-3">
-              <TabsTrigger value="sections">{t("visual.tabSections")}</TabsTrigger>
-              <TabsTrigger value="style">{t("visual.tabStyle")}</TabsTrigger>
-              <TabsTrigger value="css">CSS</TabsTrigger>
+              <TabsTrigger value="sections">
+                <LayersIcon data-icon="inline-start" />
+                {t("visual.tabSections")}
+              </TabsTrigger>
+              <TabsTrigger value="style">
+                <PaletteIcon data-icon="inline-start" />
+                {t("visual.tabStyle")}
+              </TabsTrigger>
+              <TabsTrigger value="css">
+                <CodeIcon data-icon="inline-start" />
+                CSS
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="sections" className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
               {template?.editable ? (
@@ -434,10 +490,30 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
               />
             </TabsContent>
           </Tabs>
-        </aside>
+        </ResizablePanel>
+
+        <ResizableHandle />
 
         {/* Anteprima */}
-        <section className="flex min-h-0 min-w-0 flex-col">
+        <ResizablePanel
+          id="canvas"
+          minSize={360}
+          className={cn(
+            "relative flex min-h-0 min-w-0 flex-col bg-background",
+            fullscreen && "fixed inset-0 z-50",
+          )}
+        >
+          {fullscreen && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="absolute top-3 right-3 z-10 shadow-md"
+              onClick={() => setFullscreen(false)}
+            >
+              <Minimize2Icon data-icon="inline-start" />
+              {t("visual.exitFullscreen")}
+            </Button>
+          )}
           {buildError && (
             <div className="flex shrink-0 items-start gap-2 border-b bg-destructive/5 px-3 py-2 text-xs text-destructive">
               <CircleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
@@ -457,10 +533,12 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
             onSelect={selectFromCanvas}
             labelOf={labelOf}
           />
-        </section>
+        </ResizablePanel>
+
+        <ResizableHandle />
 
         {/* Inspector */}
-        <aside className="min-h-0 overflow-y-auto border-l">
+        <ResizablePanel id="inspector" defaultSize={320} minSize={260} maxSize="40%" className="min-h-0 overflow-y-auto">
           {selected && selectedNode ? (
             <Inspector
               key={selected.id}
@@ -486,8 +564,8 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
               {t("visual.selectHint")}
             </div>
           )}
-        </aside>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       <AlertDialog open={dialog === "publish"} onOpenChange={(open) => !open && setDialog(null)}>
         <AlertDialogContent>
@@ -526,6 +604,7 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
                           setDialog(null);
                         }}
                       >
+                        <HistoryIcon data-icon="inline-start" />
                         {t("visual.restore")}
                       </Button>
                     )}
@@ -535,8 +614,12 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>
+              <XIcon data-icon="inline-start" />
+              {t("common.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction disabled={!unpublished || Boolean(buildError)} onClick={() => publish()}>
+              <RocketIcon data-icon="inline-start" />
               {t("appearance.publish")}
             </AlertDialogAction>
           </AlertDialogFooter>

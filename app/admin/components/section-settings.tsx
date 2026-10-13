@@ -1,4 +1,4 @@
-import { ImageIcon, LinkIcon, XIcon } from "lucide-react";
+import { ImageIcon, LinkIcon, UnlinkIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { MediaPicker } from "~/admin/editor/media-picker";
 import { t } from "~/admin/i18n";
@@ -86,6 +86,7 @@ function SettingField({
             {t("sectionSettings.bound", { path: value.bind })}
           </Badge>
           <Button type="button" variant="ghost" size="xs" onClick={() => onChange(undefined)}>
+            <UnlinkIcon data-icon="inline-start" />
             {t("sectionSettings.unbind")}
           </Button>
         </div>
@@ -286,6 +287,7 @@ function MediaField({
           )}
         </div>
         <Button id={id} type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <ImageIcon data-icon="inline-start" />
           {t("sectionSettings.chooseMedia")}
         </Button>
         {value && (

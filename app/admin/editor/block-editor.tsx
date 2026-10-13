@@ -30,6 +30,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import type { SectionSchema } from "~/lib/theme/sections";
 import { useState } from "react";
+import { promptDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -82,9 +83,9 @@ function Toolbar({ editor, sections }: { editor: Editor; sections: SectionSchema
     }),
   });
   const chain = () => editor.chain().focus();
-  const setLink = () => {
+  const setLink = async () => {
     const previous = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt(t("editor.linkPrompt"), previous ?? "https://");
+    const url = await promptDialog({ title: t("editor.linkTitle"), description: t("editor.linkPrompt"), defaultValue: previous ?? "https://" });
     if (url === null) return;
     if (url === "") chain().extendMarkRange("link").unsetLink().run();
     else chain().extendMarkRange("link").setLink({ href: url }).run();

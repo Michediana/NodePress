@@ -5,6 +5,7 @@ import {
   ExternalLinkIcon,
   FileTextIcon,
   FilmIcon,
+  FilterIcon,
   FolderIcon,
   FolderInputIcon,
   FolderOpenIcon,
@@ -17,6 +18,7 @@ import {
   TrashIcon,
   UploadIcon,
   XIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Form, Link, redirect, useFetcher, useNavigate } from "react-router";
@@ -729,6 +731,7 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
                 </SelectContent>
               </Select>
               <Button type="submit" variant="outline">
+                <FilterIcon data-icon="inline-start" />
                 {t("common.filter")}
               </Button>
             </Form>
@@ -930,6 +933,7 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
         label={shown?.type === "rename" && shown.kind === "media" ? t("media.name") : t("media.folderName")}
         initial={shown?.type === "rename" ? shown.name : ""}
         submitLabel={shown?.type === "rename" ? t("media.rename") : t("media.create")}
+        submitIcon={shown?.type === "rename" ? PencilIcon : FolderPlusIcon}
         busy={busy}
         onClose={() => setDialog(null)}
         onSubmit={(name) => {
@@ -962,13 +966,16 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogCancel>
+                  <XIcon data-icon="inline-start" />
+                  {t("common.cancel")}
+                </AlertDialogCancel>
                 <AlertDialogAction
                   variant="destructive"
                   disabled={busy}
                   onClick={() => submit("delete", { folders: shown.targets.folders, media: shown.targets.media })}
                 >
-                  {busy && <Spinner data-icon="inline-start" />}
+                  {busy ? <Spinner data-icon="inline-start" /> : <TrashIcon data-icon="inline-start" />}
                   {t("common.delete")}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -986,6 +993,7 @@ function NameDialog({
   label,
   initial,
   submitLabel,
+  submitIcon: SubmitIcon,
   busy,
   onClose,
   onSubmit,
@@ -995,6 +1003,7 @@ function NameDialog({
   label: string;
   initial: string;
   submitLabel: string;
+  submitIcon: LucideIcon;
   busy: boolean;
   onClose: () => void;
   onSubmit: (name: string) => void;
@@ -1031,10 +1040,11 @@ function NameDialog({
           />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
+              <XIcon data-icon="inline-start" />
               {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={busy || !value.trim()}>
-              {busy && <Spinner data-icon="inline-start" />}
+              {busy ? <Spinner data-icon="inline-start" /> : <SubmitIcon data-icon="inline-start" />}
               {submitLabel}
             </Button>
           </DialogFooter>
@@ -1080,13 +1090,14 @@ function MoveDialog({
         <FolderPicker folders={folders} value={target} onChange={setTarget} disabled={disabled} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
+            <XIcon data-icon="inline-start" />
             {t("common.cancel")}
           </Button>
           <Button
             disabled={busy || (target === currentId && !state?.folders.length) || (target !== null && disabled.has(target))}
             onClick={() => open && state && onSubmit(state, target)}
           >
-            {busy && <Spinner data-icon="inline-start" />}
+            {busy ? <Spinner data-icon="inline-start" /> : <FolderInputIcon data-icon="inline-start" />}
             {t("media.moveHere")}
           </Button>
         </DialogFooter>

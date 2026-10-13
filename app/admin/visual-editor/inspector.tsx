@@ -24,6 +24,7 @@ const BREAKPOINT_OF: Record<Viewport, "base" | "tablet" | "desktop"> = {
   mobile: "base",
   tablet: "tablet",
   desktop: "desktop",
+  full: "desktop",
 };
 
 const DEVICES: { value: Device; icon: typeof MonitorIcon }[] = [

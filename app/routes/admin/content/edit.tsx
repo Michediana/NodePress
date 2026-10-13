@@ -17,6 +17,7 @@ import { SeoPanel, type SeoState } from "~/admin/editor/seo-panel";
 import { useActionToast, type ActionResult } from "~/admin/feedback";
 import { IconLabel } from "~/admin/components/icon-label";
 import { nodeIcon } from "~/admin/components/node-icon";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { LanguageLabel } from "~/components/language-flag";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -226,8 +227,8 @@ function Editor({ loaderData, actionData: rawActionData }: Pick<Route.ComponentP
   const isPublished = translation && effectiveStatus(translation.status, translation.publishedAt) === "published";
   const mainTitle = node.translations.find((x) => x.lang === langs.defaultLang)?.title;
 
-  const destructive = (intent: string, message: string) => {
-    if (confirm(message)) submit({ intent, lang }, { method: "post" });
+  const destructive = async (intent: string, message: string) => {
+    if (await confirmDialog({ description: message, confirmLabel: t("common.delete"), destructive: true })) submit({ intent, lang }, { method: "post" });
   };
 
   return (

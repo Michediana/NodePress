@@ -1,4 +1,4 @@
-import { MoveRightIcon, PlusIcon, TimerIcon, TrashIcon } from "lucide-react";
+import { FilterIcon, MoveRightIcon, PlusIcon, TimerIcon, TrashIcon } from "lucide-react";
 import { Form, useSubmit } from "react-router";
 import { z } from "zod";
 import { requirePermission } from "~/.server/auth";
@@ -9,6 +9,7 @@ import { PageHeader } from "~/admin/components/page-header";
 import { pageParam, Pager } from "~/admin/components/pager";
 import { useActionToast } from "~/admin/feedback";
 import { IconLabel } from "~/admin/components/icon-label";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -99,6 +100,7 @@ export default function Redirects({ loaderData, actionData }: Route.ComponentPro
       <Form method="get" className="flex gap-2">
         <Input name="q" defaultValue={loaderData.q} placeholder={t("common.search")} className="max-w-xs" />
         <Button type="submit" variant="outline">
+          <FilterIcon data-icon="inline-start" />
           {t("common.filter")}
         </Button>
       </Form>
@@ -135,7 +137,10 @@ export default function Redirects({ loaderData, actionData }: Route.ComponentPro
                       variant="ghost"
                       size="icon-sm"
                       aria-label={t("common.delete")}
-                      onClick={() => confirm(t("redirects.confirmDelete")) && submit({ intent: "delete", id: String(r.id) }, { method: "post" })}
+                      onClick={async () => {
+                        if (await confirmDialog({ description: t("redirects.confirmDelete"), confirmLabel: t("common.delete"), destructive: true }))
+                          submit({ intent: "delete", id: String(r.id) }, { method: "post" });
+                      }}
                     >
                       <TrashIcon />
                     </Button>

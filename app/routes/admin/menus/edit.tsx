@@ -14,6 +14,7 @@ import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast } from "~/admin/feedback";
 import { IconLabel } from "~/admin/components/icon-label";
 import { nodeIcon } from "~/admin/components/node-icon";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { LanguageLabel } from "~/components/language-flag";
 import { Button } from "~/components/ui/button";
@@ -163,7 +164,10 @@ export default function EditMenu({ loaderData, actionData }: Route.ComponentProp
             <Button
               type="button"
               variant="destructive"
-              onClick={() => confirm(t("menus.confirmDelete")) && submit({ intent: "delete" }, { method: "post" })}
+              onClick={async () => {
+                if (await confirmDialog({ description: t("menus.confirmDelete"), confirmLabel: t("common.delete"), destructive: true }))
+                  submit({ intent: "delete" }, { method: "post" });
+              }}
             >
               <TrashIcon data-icon="inline-start" />
               {t("common.delete")}

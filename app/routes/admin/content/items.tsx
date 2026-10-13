@@ -74,6 +74,7 @@ export default function CollectionItems({ loaderData }: Route.ComponentProps) {
           </EmptyHeader>
           <EmptyContent>
             <Button nativeButton={false} render={<Link to={`/admin/content/new?type=item&parent=${collection.id}`} />}>
+              <PlusIcon data-icon="inline-start" />
               {t("content.addItem")}
             </Button>
           </EmptyContent>

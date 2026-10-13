@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
 import { cn } from "~/lib/utils";
 
-export type Viewport = "mobile" | "tablet" | "desktop";
+/** "full" usa tutta la larghezza dell'anteprima, senza scala né margini. */
+export type Viewport = "mobile" | "tablet" | "desktop" | "full";
 
 /** Larghezze simulate: sopra i breakpoint del tema (768 e 1024). */
-export const VIEWPORT_WIDTHS: Record<Viewport, number> = { mobile: 390, tablet: 820, desktop: 1280 };
+export const VIEWPORT_WIDTHS: Record<Exclude<Viewport, "full">, number> = { mobile: 390, tablet: 820, desktop: 1280 };
 
 export type CanvasHandle = {
   /** Ricarica l'anteprima senza sfarfallio (iframe nascosto, poi scambio). */
@@ -71,8 +72,10 @@ export function Canvas({ ref, theme, path, viewport, tokens, selectedId, onSelec
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const width = VIEWPORT_WIDTHS[viewport];
-  const scale = size.width ? Math.min(1, (size.width - 32) / width) : 1;
+  const full = viewport === "full";
+  const inset = full ? 0 : 16;
+  const width = full ? size.width : VIEWPORT_WIDTHS[viewport];
+  const scale = size.width && !full ? Math.min(1, (size.width - 2 * inset) / width) : 1;
 
   /** Riquadro di una sezione nel sistema di coordinate dell'iframe. */
   const boxOf = useCallback((id: string | null): Box | null => {
@@ -214,14 +217,14 @@ export function Canvas({ ref, theme, path, viewport, tokens, selectedId, onSelec
     [path, theme],
   );
 
-  const offsetLeft = Math.max(16, (size.width - width * scale) / 2);
+  const offsetLeft = Math.max(inset, (size.width - width * scale) / 2);
   const toStage = (box: Box) => ({
-    top: 16 + box.top * scale,
+    top: inset + box.top * scale,
     left: offsetLeft + box.left * scale,
     width: box.width * scale,
     height: box.height * scale,
   });
-  const frameHeight = Math.max(0, (size.height - 32) / scale);
+  const frameHeight = Math.max(0, (size.height - 2 * inset) / scale);
 
   return (
     <div ref={stage} className="relative min-h-0 flex-1 overflow-hidden bg-muted/50">
@@ -234,9 +237,13 @@ export function Canvas({ ref, theme, path, viewport, tokens, selectedId, onSelec
           aria-hidden={i !== active}
           sandbox="allow-same-origin"
           onLoad={() => onLoad(i)}
-          className={cn("absolute border-0 bg-white shadow-sm", i === active ? "visible" : "invisible")}
+          className={cn(
+            "absolute border-0 bg-white",
+            !full && "shadow-sm",
+            i === active ? "visible" : "invisible",
+          )}
           style={{
-            top: 16,
+            top: inset,
             left: offsetLeft,
             width,
             height: frameHeight,

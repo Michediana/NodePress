@@ -4,12 +4,13 @@ import { getTreeOptions } from "~/.server/nodes";
 import { getSetting } from "~/.server/settings";
 import { bundleFor } from "~/.server/theme";
 import { getBuild, listBuilds, readSources, requireTheme, samplePathForTemplate } from "~/.server/theme/store";
+import { readPanelLayouts } from "~/admin/panel-layout";
 import { can } from "~/lib/roles";
 import { templateList } from "~/lib/theme/manifest";
 import type { Route } from "./+types/customize";
 import { VisualEditor } from "~/admin/visual-editor/visual-editor";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ request, params, context }: Route.LoaderArgs) {
   const user = requirePermission(context, "themes.customize");
   const theme = await requireTheme(params.name);
   if (!theme.draftBuildId)
@@ -81,6 +82,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       .filter((o) => o.type === "collection")
       .map((o) => ({ id: o.id, label: o.label })),
     builds: builds.filter((b) => b.publishedAt).map((b) => ({ id: b.id, publishedAt: b.publishedAt!.toISOString() })),
+    layouts: readPanelLayouts(request, "visual-editor"),
   };
 }
 

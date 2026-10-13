@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ShieldIcon, TrashIcon, UserIcon, UserPenIcon } from "lucide-react";
+import { ArrowLeftIcon, SaveIcon, ShieldIcon, TrashIcon, UserIcon, UserPenIcon, UserPlusIcon } from "lucide-react";
 import { Form, Link, redirect, useNavigation, useSubmit } from "react-router";
 import { requirePermission } from "~/.server/auth";
 import { formToObject, handleUserErrors, parse } from "~/.server/forms";
@@ -8,6 +8,7 @@ import { PageHeader } from "~/admin/components/page-header";
 import { useActionToast, type ActionResult } from "~/admin/feedback";
 import { IconLabel } from "~/admin/components/icon-label";
 import { SwitchField } from "~/admin/components/switch-field";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
@@ -63,7 +64,10 @@ export default function EditUser({ loaderData, actionData: rawActionData }: Rout
               {t("common.back")}
             </Button>
             {user && !isSelf && (
-              <Button variant="destructive" onClick={() => confirm(t("users.confirmDelete")) && submit({ intent: "delete" }, { method: "post" })}>
+              <Button variant="destructive" onClick={async () => {
+                  if (await confirmDialog({ description: t("users.confirmDelete"), confirmLabel: t("common.delete"), destructive: true }))
+                    submit({ intent: "delete" }, { method: "post" });
+                }}>
                 <TrashIcon data-icon="inline-start" />
                 {t("common.delete")}
               </Button>
@@ -115,7 +119,13 @@ export default function EditUser({ loaderData, actionData: rawActionData }: Rout
           </CardContent>
           <CardFooter>
             <Button type="submit" name="intent" value="save" disabled={navigation.state !== "idle"}>
-              {navigation.state !== "idle" && <Spinner data-icon="inline-start" />}
+              {navigation.state !== "idle" ? (
+                <Spinner data-icon="inline-start" />
+              ) : user ? (
+                <SaveIcon data-icon="inline-start" />
+              ) : (
+                <UserPlusIcon data-icon="inline-start" />
+              )}
               {user ? t("common.save") : t("users.create")}
             </Button>
           </CardFooter>

@@ -1,13 +1,16 @@
 import {
   CodeIcon,
-  PaintbrushIcon,
   CopyIcon,
   DownloadIcon,
   EllipsisIcon,
   EyeIcon,
+  PaintbrushIcon,
   PlusIcon,
+  PowerIcon,
+  RocketIcon,
   Trash2Icon,
   UploadIcon,
+  XIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Form, Link, redirect, useNavigation } from "react-router";
@@ -268,6 +271,7 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
                 <Form method="post">
                   <input type="hidden" name="name" value={theme.name} />
                   <Button size="sm" variant="outline" name="intent" value="publish" disabled={busy}>
+                    <RocketIcon data-icon="inline-start" />
                     {t("appearance.publish")}
                   </Button>
                 </Form>
@@ -276,6 +280,7 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
                 <Form method="post">
                   <input type="hidden" name="name" value={theme.name} />
                   <Button size="sm" variant="outline" name="intent" value="activate" disabled={busy}>
+                    <PowerIcon data-icon="inline-start" />
                     {t("appearance.activate")}
                   </Button>
                 </Form>
@@ -326,7 +331,7 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
             </FieldGroup>
             <DialogFooter>
               <Button type="submit" name="intent" value="create" disabled={busy}>
-                {busy && <Spinner data-icon="inline-start" />}
+                {busy ? <Spinner data-icon="inline-start" /> : <PlusIcon data-icon="inline-start" />}
                 {t("appearance.create")}
               </Button>
             </DialogFooter>
@@ -355,7 +360,7 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
             </FieldGroup>
             <DialogFooter>
               <Button type="submit" name="intent" value="import" disabled={busy}>
-                {busy && <Spinner data-icon="inline-start" />}
+                {busy ? <Spinner data-icon="inline-start" /> : <UploadIcon data-icon="inline-start" />}
                 {t("appearance.import")}
               </Button>
             </DialogFooter>
@@ -373,8 +378,12 @@ export default function AppearanceList({ loaderData, actionData }: Route.Compone
                 <AlertDialogDescription>{t("appearance.deleteDescription")}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogCancel>
+                  <XIcon data-icon="inline-start" />
+                  {t("common.cancel")}
+                </AlertDialogCancel>
                 <AlertDialogAction variant="destructive" render={<button type="submit" name="intent" value="delete" />}>
+                  <Trash2Icon data-icon="inline-start" />
                   {t("common.delete")}
                 </AlertDialogAction>
               </AlertDialogFooter>

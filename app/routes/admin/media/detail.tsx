@@ -1,5 +1,5 @@
 import { ArrowLeftIcon, TrashIcon } from "lucide-react";
-import { Form, Link, redirect } from "react-router";
+import { Form, Link, redirect, useSubmit } from "react-router";
 import { getUser, requirePermission } from "~/.server/auth";
 import { handleUserErrors, UserError } from "~/.server/forms";
 import { getSiteLanguages } from "~/.server/languages";
@@ -8,6 +8,7 @@ import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { SettingsCard } from "~/admin/components/settings-form";
 import { useActionToast } from "~/admin/feedback";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { LanguageLabel } from "~/components/language-flag";
 import { Button } from "~/components/ui/button";
@@ -50,6 +51,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
 export default function MediaDetail({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
+  const submit = useSubmit();
   const { media, langs } = loaderData;
   const url = mediaUrl(media.file);
   return (
@@ -65,8 +67,10 @@ export default function MediaDetail({ loaderData, actionData }: Route.ComponentP
             {loaderData.canDelete && (
               <Form
                 method="post"
-                onSubmit={(e) => {
-                  if (!confirm(t("media.confirmDelete"))) e.preventDefault();
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (await confirmDialog({ description: t("media.confirmDelete"), confirmLabel: t("common.delete"), destructive: true }))
+                    submit({ intent: "delete" }, { method: "post" });
                 }}
               >
                 <Button type="submit" name="intent" value="delete" variant="destructive">

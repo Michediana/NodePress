@@ -1,5 +1,6 @@
 import { BotIcon, TrashIcon } from "lucide-react";
 import { useSubmit } from "react-router";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -57,10 +58,10 @@ export function ConnectedApps({
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("oauth.revoke")}
-                onClick={() =>
-                  confirm(t("oauth.confirmRevoke")) &&
-                  submit({ intent: "revokeGrant", id: String(app.id) }, { method: "post" })
-                }
+                onClick={async () => {
+                  if (await confirmDialog({ description: t("oauth.confirmRevoke"), confirmLabel: t("oauth.revoke"), destructive: true }))
+                    submit({ intent: "revokeGrant", id: String(app.id) }, { method: "post" });
+                }}
               >
                 <TrashIcon />
               </Button>

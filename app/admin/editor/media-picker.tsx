@@ -1,4 +1,4 @@
-import { CheckIcon, FolderIcon, UploadIcon } from "lucide-react";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, FolderIcon, UploadIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
 import { t } from "~/admin/i18n";
@@ -169,11 +169,13 @@ export function MediaPicker({
         <DialogFooter className="items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <ChevronLeftIcon data-icon="inline-start" />
               {t("common.previous")}
             </Button>
             <span className="text-sm text-muted-foreground">{t("common.pageOf", { page, pages })}</span>
             <Button type="button" variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage(page + 1)}>
               {t("common.next")}
+              <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </div>
           <Button
@@ -184,6 +186,7 @@ export function MediaPicker({
               onOpenChange(false);
             }}
           >
+            <CheckIcon data-icon="inline-start" />
             {t("media.pickConfirm", { count: selected.length })}
           </Button>
         </DialogFooter>

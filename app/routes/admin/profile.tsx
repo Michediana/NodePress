@@ -13,6 +13,7 @@ import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { SettingsCard } from "~/admin/components/settings-form";
 import { useActionToast } from "~/admin/feedback";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "~/components/ui/input-group";
@@ -161,10 +162,10 @@ function ThemeKeys({ keys, newKey }: { keys: ThemeKey[]; newKey: string | null }
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("apiKeys.revoke")}
-                onClick={() =>
-                  confirm(t("apiKeys.confirmRevoke")) &&
-                  submit({ intent: "deleteThemeKey", id: String(key.id) }, { method: "post" })
-                }
+                onClick={async () => {
+                  if (await confirmDialog({ description: t("apiKeys.confirmRevoke"), confirmLabel: t("apiKeys.revoke"), destructive: true }))
+                    submit({ intent: "deleteThemeKey", id: String(key.id) }, { method: "post" });
+                }}
               >
                 <TrashIcon />
               </Button>

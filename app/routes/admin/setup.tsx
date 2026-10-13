@@ -1,3 +1,4 @@
+import { RocketIcon } from "lucide-react";
 import { Form, redirect, useNavigation } from "react-router";
 import { z } from "zod";
 import { createUserSession, hashPassword, needsSetup } from "~/.server/auth";
@@ -86,7 +87,7 @@ export default function Setup({ loaderData, actionData }: Route.ComponentProps) 
             error={errors.password}
           />
           <Button type="submit" disabled={busy}>
-            {busy && <Spinner data-icon="inline-start" />}
+            {busy ? <Spinner data-icon="inline-start" /> : <RocketIcon data-icon="inline-start" />}
             {t("setup.submit")}
           </Button>
         </FieldGroup>

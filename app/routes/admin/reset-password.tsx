@@ -1,3 +1,4 @@
+import { KeyRoundIcon } from "lucide-react";
 import { Form, redirect, useNavigation } from "react-router";
 import { consumePasswordReset, findPasswordReset } from "~/.server/auth";
 import { AuthCard } from "~/admin/components/auth-card";
@@ -50,7 +51,7 @@ export default function ResetPassword({ loaderData, actionData }: Route.Componen
           <TextField name="password" type="password" label={t("users.newPassword")} required minLength={8} autoComplete="new-password" />
           <TextField name="confirm" type="password" label={t("users.confirmPassword")} required minLength={8} autoComplete="new-password" />
           <Button type="submit" disabled={busy}>
-            {busy && <Spinner data-icon="inline-start" />}
+            {busy ? <Spinner data-icon="inline-start" /> : <KeyRoundIcon data-icon="inline-start" />}
             {t("reset.submit")}
           </Button>
         </FieldGroup>

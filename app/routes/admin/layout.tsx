@@ -16,6 +16,7 @@ import { getSessionUser, needsSetup, userContext } from "~/.server/auth";
 import { frontBaseUrl } from "~/.server/origins";
 import { getSiteLanguages } from "~/.server/languages";
 import { getSetting } from "~/.server/settings";
+import { DialogHost } from "~/admin/components/dialogs";
 import { Logo } from "~/admin/components/logo";
 import { t } from "~/admin/i18n";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
@@ -194,6 +195,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           </div>
         </SidebarInset>
         <Toaster />
+        <DialogHost />
       </SidebarProvider>
     </TooltipProvider>
   );

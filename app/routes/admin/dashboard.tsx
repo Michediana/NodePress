@@ -88,6 +88,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
               </EmptyHeader>
               <EmptyContent>
                 <Button nativeButton={false} render={<Link to="/admin/content/new" />}>
+                  <FilePlusIcon data-icon="inline-start" />
                   {t("content.new")}
                 </Button>
               </EmptyContent>

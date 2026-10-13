@@ -1,7 +1,8 @@
-import { ChevronRightIcon, CopyIcon, ExternalLinkIcon, PlayIcon } from "lucide-react";
+import { ChevronRightIcon, CopyIcon, ExternalLinkIcon, EyeIcon, PencilIcon, PlayIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { ApiDocsContext } from "~/.server/api-docs";
+import { confirmDialog } from "~/admin/components/dialogs";
 import { t } from "~/admin/i18n";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -118,7 +119,7 @@ function EndpointRow({ endpoint, baseUrl, apiKey, publicRead }: { endpoint: Endp
   const command = curl(baseUrl, endpoint, apiKey, body);
 
   async function run() {
-    if (endpoint.method !== "GET" && !confirm(t("apiDocs.confirmWrite", { method: endpoint.method, path: endpoint.path }))) return;
+    if (endpoint.method !== "GET" && !(await confirmDialog({ description: t("apiDocs.confirmWrite", { method: endpoint.method, path: endpoint.path }) }))) return;
     setLoading(true);
     const started = performance.now();
     try {
@@ -236,8 +237,14 @@ export function ApiDocs({ context, initialKey }: { context: ApiDocsContext; init
         </div>
         <Tabs defaultValue="read">
           <TabsList>
-            <TabsTrigger value="read">{t("apiDocs.readTab")}</TabsTrigger>
-            <TabsTrigger value="admin">{t("apiDocs.adminTab")}</TabsTrigger>
+            <TabsTrigger value="read">
+              <EyeIcon data-icon="inline-start" />
+              {t("apiDocs.readTab")}
+            </TabsTrigger>
+            <TabsTrigger value="admin">
+              <PencilIcon data-icon="inline-start" />
+              {t("apiDocs.adminTab")}
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="read" className="flex flex-col gap-3">
             <p className="text-muted-foreground">{t("apiDocs.readHelp")}</p>
