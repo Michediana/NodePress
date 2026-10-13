@@ -20,7 +20,7 @@ function safeNext(value: FormDataEntryValue | string | null) {
 
 export async function loader({ request }: Route.LoaderArgs) {
   if (await needsSetup()) throw redirect("/admin/setup");
-  if (await getSessionUser(request)) throw redirect("/admin");
+  if (await getSessionUser(request)) throw redirect(safeNext(new URL(request.url).searchParams.get("next")));
   return { lang: "it" };
 }
 

@@ -4,9 +4,11 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { getApiDocsContext } from "~/.server/api-docs";
 import { createApiKey, deleteApiKey, listApiKeys } from "~/.server/api-keys";
+import { deleteGrant, listGrants } from "~/.server/oauth";
 import { requirePermission } from "~/.server/auth";
 import { formToObject, handleUserErrors, parse, UserError } from "~/.server/forms";
 import { ApiDocs } from "~/admin/components/api-docs";
+import { ConnectedApps } from "~/admin/components/connected-apps";
 import { McpSetup } from "~/admin/components/mcp-setup";
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
@@ -25,8 +27,8 @@ import type { Route } from "./+types/api-keys";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   requirePermission(context, "apikeys");
-  const [keys, docs] = await Promise.all([listApiKeys(), getApiDocsContext(request)]);
-  return { keys, docs, mcpUrl: `${new URL(request.url).origin}/mcp` };
+  const [keys, docs, apps] = await Promise.all([listApiKeys(), getApiDocsContext(request), listGrants()]);
+  return { keys, docs, apps, mcpUrl: `${new URL(request.url).origin}/mcp` };
 }
 
 const createSchema = z.object({ name: z.string().trim().min(1).max(255), scope: z.enum(["read", "theme", "admin"]) });
@@ -35,6 +37,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   const user = requirePermission(context, "apikeys");
   const form = formToObject(await request.formData());
   return handleUserErrors(async () => {
+    if (form.intent === "revokeGrant") {
+      if (!(await deleteGrant(Number(form.id)))) throw new UserError(t("apiKeys.notFound"), 404);
+      return { message: t("oauth.revoked") };
+    }
     if (form.intent === "delete") {
       await deleteApiKey(Number(form.id));
       return { message: t("apiKeys.revoked") };
@@ -164,6 +170,7 @@ export default function ApiKeys({ loaderData, actionData }: Route.ComponentProps
         </Card>
       </div>
       <McpSetup url={loaderData.mcpUrl} apiKey={newKey} />
+      <ConnectedApps apps={loaderData.apps} showUser />
       <ApiDocs context={loaderData.docs} initialKey={newKey} />
     </>
   );

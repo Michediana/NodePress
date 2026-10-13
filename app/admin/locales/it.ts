@@ -487,6 +487,42 @@ export const it = {
     createdTitle: "API key creata",
     createdHelp: "Copia la key ora: non sarà più visibile.",
   },
+  oauth: {
+    title: "Autorizza applicazione",
+    heading: "Collega {client}",
+    description: "{client} chiede di accedere a {site} tramite il server MCP, con il tuo account.",
+    continue: "Continua",
+    errorTitle: "Richiesta non valida",
+    returnTo: "Dopo il consenso torni a",
+    publishedBy: "Metadati pubblicati da",
+    signedInAs: "Stai autorizzando come {name} ({email}).",
+    scopeLabel: "Cosa può fare",
+    scopes: {
+      admin: {
+        title: "Gestione completa",
+        description: "Contenuti, media, menu, redirect, lingue, impostazioni, utenti e temi, con i tuoi permessi di amministratore.",
+      },
+      theme: {
+        title: "Solo temi",
+        description: "Codice dei temi, bozze, anteprime e pubblicazione. Non può attivare né eliminare temi.",
+      },
+    },
+    noScopesTitle: "Accesso non disponibile",
+    noScopes: "Il server MCP è riservato agli amministratori e agli sviluppatori tema.",
+    warning:
+      "Autorizza solo applicazioni di cui ti fidi: {client} potrà modificare il sito a tuo nome finché non revochi l'accesso dal tuo profilo.",
+    allow: "Consenti",
+    deny: "Rifiuta",
+    apps: "Applicazioni collegate",
+    appsHelp: "Applicazioni autorizzate con OAuth a usare il server MCP. Revocare un accesso lo interrompe subito.",
+    allAppsHelp: "Tutte le applicazioni autorizzate dagli utenti del sito a usare il server MCP.",
+    noApps: "Nessuna applicazione collegata.",
+    lastUsed: "Ultimo uso",
+    connectedOn: "Collegata il {date}",
+    revoke: "Revoca",
+    confirmRevoke: "Revocare l'accesso? L'applicazione dovrà chiedere di nuovo il consenso.",
+    revoked: "Accesso revocato.",
+  },
   mcp: {
     title: "Server MCP per l'AI",
     description:
@@ -494,10 +530,16 @@ export const it = {
     endpoint: "Endpoint",
     scopes: "Una key admin dà accesso a tutto; una key theme solo ai temi (codice, bozze, anteprime, pubblicazione). Le key read non sono ammesse.",
     otherClients: "Altri client",
-    claudeCodeHelp: "Esegui il comando nel terminale, nella cartella del progetto o con --scope user per averlo ovunque.",
-    desktopHelp: "Claude Desktop collega i server remoti tramite mcp-remote (serve Node.js): aggiungi la configurazione a claude_desktop_config.json e riavvia l'app.",
+    claudeAiHelp:
+      "In claude.ai o in Claude Desktop (Impostazioni → Connettori → Aggiungi connettore personalizzato) incolla l'URL dell'endpoint: l'accesso avviene con OAuth, senza API key. Il sito deve essere raggiungibile da internet in HTTPS.",
+    oauthNote: "I client che supportano OAuth possono collegarsi anche senza API key: basta l'URL, poi si accede con il proprio account e si sceglie cosa autorizzare.",
+    claudeCodeOAuthHelp:
+      "Con OAuth: aggiungi il server, poi in Claude Code esegui /mcp e scegli Authenticate. Si apre il browser per il consenso. Aggiungi --scope user per averlo in tutti i progetti.",
+    claudeCodeHelp: "Con una API key, senza login nel browser:",
+    desktopHelp:
+      "Per un sito non raggiungibile da internet (es. in locale), Claude Desktop può collegarsi con una API key tramite mcp-remote (serve Node.js): aggiungi la configurazione a claude_desktop_config.json e riavvia l'app.",
     jsonHelp: "Per i client che supportano i server HTTP con header (Cursor, VS Code, Windsurf…), nel loro file di configurazione MCP.",
-    keyPlaceholder: "Sostituisci <API_KEY> con una key admin o theme: generane una qui sopra e i comandi la includeranno.",
+    keyPlaceholder: "Nei comandi con <API_KEY> usa una key admin o theme: generane una qui sopra e verrà inserita.",
   },
   apiDocs: {
     title: "Documentazione API",

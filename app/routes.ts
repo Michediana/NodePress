@@ -8,6 +8,7 @@ export default [
     route("admin/logout", "routes/admin/logout.tsx"),
     route("admin/forgot-password", "routes/admin/forgot-password.tsx"),
     route("admin/reset-password/:token", "routes/admin/reset-password.tsx"),
+    route("admin/oauth/authorize", "routes/admin/oauth-authorize.tsx"),
     route("admin", "routes/admin/layout.tsx", [
       layout("routes/admin/boundary.tsx", [
         index("routes/admin/dashboard.tsx"),
@@ -76,8 +77,13 @@ export default [
     route("*", "routes/api/not-found.ts"),
   ]),
 
-  // --- Server MCP per gli assistenti AI ---
+  // --- Server MCP per gli assistenti AI, con OAuth ---
   route("mcp", "routes/mcp.ts"),
+  route(".well-known/oauth-protected-resource/*", "routes/oauth/protected-resource.ts"),
+  route(".well-known/oauth-authorization-server/*", "routes/oauth/server-metadata.ts"),
+  route("oauth/register", "routes/oauth/register.ts"),
+  route("oauth/token", "routes/oauth/token.ts"),
+  route("oauth/revoke", "routes/oauth/revoke.ts"),
 
   // --- File generati e media ---
   route("sitemap.xml", "routes/seo/sitemap.ts"),

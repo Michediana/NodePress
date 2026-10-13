@@ -4,6 +4,7 @@ import { findApiKey, type ApiScope } from "./api-keys";
 import type { SessionUser } from "./auth";
 import { db, ensureMigrated, schema } from "./db";
 import { UserError } from "./forms";
+import { allowedScopes, findAccessToken, isKnownResource, isOAuthAccessToken } from "./oauth";
 import { getSetting } from "./settings";
 import { eq } from "drizzle-orm";
 
@@ -43,12 +44,23 @@ const ACCEPTED_SCOPES: Record<ApiScope, ApiScope[]> = {
   theme: ["theme", "admin"],
 };
 
-/** Verifica la API key. Le letture sono libere se l'impostazione "API pubblica" è attiva. */
-export async function authenticate(request: Request, required: ApiScope): Promise<ApiAuth> {
+/**
+ * Verifica la API key. Le letture sono libere se l'impostazione "API pubblica" è attiva.
+ * Con `oauth: true` (solo /mcp) accetta anche gli access token OAuth, legati a quella risorsa.
+ */
+export async function authenticate(
+  request: Request,
+  required: ApiScope,
+  options: { oauth?: boolean } = {},
+): Promise<ApiAuth> {
   const key = extractKey(request);
   if (!key) {
     if (required === "read" && (await getSetting("publicApi"))) return { scope: "public", user: null };
     throw new ApiError(401, "API key mancante.");
+  }
+  if (isOAuthAccessToken(key)) {
+    if (!options.oauth) throw new ApiError(401, "I token OAuth valgono solo per il server MCP (/mcp).");
+    return authenticateOAuth(request, key, required);
   }
   const row = await findApiKey(key);
   if (!row) throw new ApiError(401, "API key non valida.");
@@ -131,4 +143,19 @@ export function langParam(url: URL, codes: string[], fallback: string) {
   const lang = url.searchParams.get("lang") ?? fallback;
   if (!codes.includes(lang)) throw new ApiError(400, `Lingua "${lang}" non attiva.`);
   return lang;
+}
+
+async function authenticateOAuth(request: Request, token: string, required: ApiScope): Promise<ApiAuth> {
+  const found = await findAccessToken(token);
+  if (!found) throw new ApiError(401, "Token OAuth non valido o scaduto.");
+  const { grant, user } = found;
+  if (!(await isKnownResource(request, grant.resource))) throw new ApiError(401, "Token emesso per un'altra risorsa.");
+  // Ruolo e capability si ricontrollano a ogni richiesta: chi perde il permesso perde anche l'accesso.
+  if (!allowedScopes(user).includes(grant.scope))
+    throw new ApiError(403, "L'utente non ha più i permessi concessi a questa applicazione.");
+  if (!ACCEPTED_SCOPES[required].includes(grant.scope)) throw new ApiError(403, `Serve lo scope ${required}.`);
+  return {
+    scope: grant.scope,
+    user: { id: user.id, email: user.email, name: user.name, role: user.role, themeDeveloper: user.themeDeveloper },
+  };
 }

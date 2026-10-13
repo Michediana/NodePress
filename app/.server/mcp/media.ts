@@ -1,5 +1,3 @@
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
 import path from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -19,11 +17,11 @@ import {
   updateMediaAlt,
   uploadMedia,
 } from "../media";
+import { fetchPublic } from "../net";
 import { getSetting } from "../settings";
 import { addTool, type McpContext } from "./tools";
 
 const FETCH_TIMEOUT = 30_000;
-const MAX_REDIRECTS = 3;
 
 const EXTENSION_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -51,59 +49,6 @@ function mediaView(row: Media, base: string) {
     folderId: row.folderId,
     createdAt: row.createdAt,
   };
-}
-
-/** Indirizzi non pubblici: un URL che punta qui potrebbe leggere servizi interni e pubblicarli come media. */
-function isPrivateAddress(address: string) {
-  const ip = address.toLowerCase().replace(/^::ffff:/, "");
-  if (isIP(ip) === 4) {
-    const [a, b] = ip.split(".").map(Number);
-    return (
-      a === 0 ||
-      a === 10 ||
-      a === 127 ||
-      (a === 100 && b >= 64 && b <= 127) ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      a >= 224
-    );
-  }
-  return ip === "::" || ip === "::1" || ip.startsWith("fc") || ip.startsWith("fd") || ip.startsWith("fe80");
-}
-
-async function assertPublicUrl(url: URL) {
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new UserError("Sono ammessi solo URL http e https.");
-  const host = url.hostname.replace(/^\[|\]$/g, "");
-  const addresses = isIP(host) ? [host] : (await lookup(host, { all: true })).map((r) => r.address);
-  if (!addresses.length || addresses.some(isPrivateAddress))
-    throw new UserError("L'URL punta a un indirizzo di rete privato: non è ammesso.");
-}
-
-/** Scarica un file da un URL pubblico, seguendo pochi redirect e controllando ogni destinazione. */
-async function download(source: string) {
-  let url: URL;
-  try {
-    url = new URL(source);
-  } catch {
-    throw new UserError("URL non valido.");
-  }
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await assertPublicUrl(url);
-    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(FETCH_TIMEOUT) });
-    const location = response.headers.get("Location");
-    if (response.status >= 300 && response.status < 400 && location) {
-      url = new URL(location, url);
-      continue;
-    }
-    if (!response.ok) throw new UserError(`Download non riuscito: HTTP ${response.status}.`);
-    if (Number(response.headers.get("Content-Length") ?? 0) > MAX_UPLOAD_BYTES)
-      throw new UserError("Il file supera la dimensione massima di 100 MB.");
-    const data = Buffer.from(await response.arrayBuffer());
-    if (data.byteLength > MAX_UPLOAD_BYTES) throw new UserError("Il file supera la dimensione massima di 100 MB.");
-    return { data, url, mime: response.headers.get("Content-Type") ?? "" };
-  }
-  throw new UserError("Troppi redirect.");
 }
 
 export function registerMediaTools(server: McpServer, ctx: McpContext) {
@@ -180,7 +125,7 @@ export function registerMediaTools(server: McpServer, ctx: McpContext) {
       let name = args.filename;
       let mime = args.mimeType ?? "";
       if (args.url) {
-        const result = await download(args.url);
+        const result = await fetchPublic(args.url, { maxBytes: MAX_UPLOAD_BYTES, timeout: FETCH_TIMEOUT });
         data = result.data;
         name ??= decodeURIComponent(path.posix.basename(result.url.pathname)) || "file";
         mime ||= result.mime;

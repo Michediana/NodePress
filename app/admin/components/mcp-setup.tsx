@@ -28,6 +28,7 @@ function Snippet({ code }: { code: string }) {
 /** Istruzioni per collegare un assistente AI al server MCP del sito. */
 export function McpSetup({ url, apiKey }: { url: string; apiKey?: string | null }) {
   const key = apiKey || "<API_KEY>";
+  const claudeCodeOAuth = `claude mcp add --transport http nodepress ${url}`;
   const claudeCode = `claude mcp add --transport http nodepress ${url} --header "Authorization: Bearer ${key}"`;
   const json = JSON.stringify(
     { mcpServers: { nodepress: { type: "http", url, headers: { Authorization: `Bearer ${key}` } } } },
@@ -63,25 +64,30 @@ export function McpSetup({ url, apiKey }: { url: string; apiKey?: string | null 
           </div>
           <FieldDescription>{t("mcp.scopes")}</FieldDescription>
         </Field>
-        <Tabs defaultValue="claude-code">
+        <Tabs defaultValue="claude-ai">
           <TabsList>
+            <TabsTrigger value="claude-ai">claude.ai / Desktop</TabsTrigger>
             <TabsTrigger value="claude-code">Claude Code</TabsTrigger>
-            <TabsTrigger value="desktop">Claude Desktop</TabsTrigger>
             <TabsTrigger value="json">{t("mcp.otherClients")}</TabsTrigger>
           </TabsList>
-          <TabsContent value="claude-code" className="flex flex-col gap-3">
-            <p className="text-muted-foreground">{t("mcp.claudeCodeHelp")}</p>
-            <Snippet code={claudeCode} />
-          </TabsContent>
-          <TabsContent value="desktop" className="flex flex-col gap-3">
+          <TabsContent value="claude-ai" className="flex flex-col gap-3">
+            <p className="text-muted-foreground">{t("mcp.claudeAiHelp")}</p>
+            <Snippet code={url} />
             <p className="text-muted-foreground">{t("mcp.desktopHelp")}</p>
             <Snippet code={desktop} />
+          </TabsContent>
+          <TabsContent value="claude-code" className="flex flex-col gap-3">
+            <p className="text-muted-foreground">{t("mcp.claudeCodeOAuthHelp")}</p>
+            <Snippet code={claudeCodeOAuth} />
+            <p className="text-muted-foreground">{t("mcp.claudeCodeHelp")}</p>
+            <Snippet code={claudeCode} />
           </TabsContent>
           <TabsContent value="json" className="flex flex-col gap-3">
             <p className="text-muted-foreground">{t("mcp.jsonHelp")}</p>
             <Snippet code={json} />
           </TabsContent>
         </Tabs>
+        <p className="text-muted-foreground">{t("mcp.oauthNote")}</p>
         {!apiKey && <p className="text-muted-foreground">{t("mcp.keyPlaceholder")}</p>}
       </CardContent>
     </Card>

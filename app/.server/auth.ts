@@ -161,8 +161,10 @@ export async function consumePasswordReset(token: string, password: string) {
       .update(schema.users)
       .set({ passwordHash: await hashPassword(password) })
       .where(eq(schema.users.id, reset.userId));
-    // Invalida tutte le sessioni esistenti.
+    // Invalida tutte le sessioni esistenti e gli accessi concessi alle applicazioni (OAuth).
     await tx.delete(schema.sessions).where(eq(schema.sessions.userId, reset.userId));
+    await tx.delete(schema.oauthGrants).where(eq(schema.oauthGrants.userId, reset.userId));
+    await tx.delete(schema.oauthCodes).where(eq(schema.oauthCodes.userId, reset.userId));
   });
   return true;
 }

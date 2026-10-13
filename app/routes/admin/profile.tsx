@@ -7,6 +7,8 @@ import { createApiKey, deleteApiKey, listOwnThemeKeys } from "~/.server/api-keys
 import { getUser, hashPassword, verifyPassword } from "~/.server/auth";
 import { db, schema } from "~/.server/db";
 import { formToObject, handleUserErrors, parse, UserError } from "~/.server/forms";
+import { allowedScopes, deleteGrant, listGrants, revokeUserGrants } from "~/.server/oauth";
+import { ConnectedApps } from "~/admin/components/connected-apps";
 import { TextField } from "~/admin/components/fields";
 import { PageHeader } from "~/admin/components/page-header";
 import { SettingsCard } from "~/admin/components/settings-form";
@@ -22,7 +24,9 @@ export async function loader({ context }: Route.LoaderArgs) {
   const user = getUser(context);
   // Gli sviluppatori tema gestiscono qui le proprie key per la CLI (scope theme).
   const themeKeys = can(user, "themes.code") ? await listOwnThemeKeys(user.id) : null;
-  return { user, themeKeys };
+  // Applicazioni collegate al server MCP con OAuth: visibili a chi può usarlo o le ha ancora.
+  const apps = await listGrants(user.id);
+  return { user, themeKeys, apps: allowedScopes(user).length || apps.length ? apps : null };
 }
 
 const profileSchema = z.object({ name: z.string().trim().min(1).max(255), email: z.email().trim().toLowerCase() });
@@ -33,6 +37,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   const user = getUser(context);
   const form = formToObject(await request.formData());
   return handleUserErrors(async () => {
+    if (form.intent === "revokeGrant") {
+      if (!(await deleteGrant(Number(form.id), user.id))) throw new UserError(t("apiKeys.notFound"), 404);
+      return { message: t("oauth.revoked") };
+    }
     if (form.intent === "createThemeKey" || form.intent === "deleteThemeKey") {
       if (!can(user, "themes.code")) throw new UserError(t("errors.forbidden"), 403);
       if (form.intent === "deleteThemeKey") {
@@ -51,6 +59,8 @@ export async function action({ request, context }: Route.ActionArgs) {
         .update(schema.users)
         .set({ passwordHash: await hashPassword(input.password) })
         .where(eq(schema.users.id, user.id));
+      // Le applicazioni collegate con la vecchia password perdono l'accesso.
+      await revokeUserGrants(user.id);
       return { message: t("profile.passwordChanged") };
     }
     const input = parse(profileSchema, form);
@@ -63,7 +73,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function Profile({ loaderData, actionData }: Route.ComponentProps) {
   useActionToast(actionData);
-  const { user, themeKeys } = loaderData;
+  const { user, themeKeys, apps } = loaderData;
   const newKey = (actionData && "key" in actionData ? actionData.key : null) ?? null;
   return (
     <>
@@ -99,6 +109,7 @@ export default function Profile({ loaderData, actionData }: Route.ComponentProps
           />
         </SettingsCard>
         {themeKeys && <ThemeKeys keys={themeKeys} newKey={newKey} />}
+        {apps && <ConnectedApps apps={apps} />}
       </div>
     </>
   );

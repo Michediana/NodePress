@@ -73,6 +73,65 @@ export const apiKeys = mysqlTable("api_keys", {
   createdAt: now(),
 });
 
+// --- OAuth (server MCP) ---
+
+/** Client OAuth: registrati con la registrazione dinamica o letti da un Client ID Metadata Document. */
+export const oauthClients = mysqlTable("oauth_clients", {
+  id: int("id").autoincrement().primaryKey(),
+  /** client_id: casuale (`npc_…`) o l'URL del metadata document. */
+  clientId: varchar("client_id", { length: 700 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  clientUri: varchar("client_uri", { length: 1000 }),
+  redirectUris: json("redirect_uris").$type<string[]>().notNull(),
+  /** true se il client_id è un URL e i metadati vanno riletti da lì. */
+  metadataDocument: boolean("metadata_document").notNull().default(false),
+  fetchedAt: datetime("fetched_at"),
+  lastUsedAt: datetime("last_used_at"),
+  createdAt: now(),
+});
+
+/** Codici di autorizzazione: monouso, validi un minuto, legati a PKCE, redirect_uri e risorsa. */
+export const oauthCodes = mysqlTable("oauth_codes", {
+  id: varchar("id", { length: 64 }).primaryKey(), // hash sha256 del codice
+  clientId: int("client_id")
+    .notNull()
+    .references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: int("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  scope: mysqlEnum("scope", ["admin", "theme"]).notNull(),
+  redirectUri: varchar("redirect_uri", { length: 1000 }).notNull(),
+  codeChallenge: varchar("code_challenge", { length: 128 }).notNull(),
+  resource: varchar("resource", { length: 1000 }).notNull(),
+  expiresAt: datetime("expires_at").notNull(),
+  createdAt: now(),
+});
+
+/** Accesso concesso a un client: access token e refresh token correnti (solo hash), ruotati a ogni rinnovo. */
+export const oauthGrants = mysqlTable(
+  "oauth_grants",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    clientId: int("client_id")
+      .notNull()
+      .references(() => oauthClients.id, { onDelete: "cascade" }),
+    userId: int("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    scope: mysqlEnum("scope", ["admin", "theme"]).notNull(),
+    resource: varchar("resource", { length: 1000 }).notNull(),
+    accessHash: varchar("access_hash", { length: 64 }).notNull().unique(),
+    accessExpiresAt: datetime("access_expires_at").notNull(),
+    refreshHash: varchar("refresh_hash", { length: 64 }).notNull().unique(),
+    /** Refresh token precedente: se torna, è stato rubato e la concessione viene revocata. */
+    previousRefreshHash: varchar("previous_refresh_hash", { length: 64 }),
+    refreshExpiresAt: datetime("refresh_expires_at").notNull(),
+    lastUsedAt: datetime("last_used_at"),
+    createdAt: now(),
+  },
+  (t) => [index("oauth_grants_user_idx").on(t.userId), index("oauth_grants_prev_idx").on(t.previousRefreshHash)],
+);
+
 // --- Impostazioni e lingue ---
 
 export const settings = mysqlTable("settings", {
@@ -330,3 +389,5 @@ export type Menu = typeof menus.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type Redirect = typeof redirects.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
+export type OAuthClient = typeof oauthClients.$inferSelect;
+export type OAuthGrant = typeof oauthGrants.$inferSelect;

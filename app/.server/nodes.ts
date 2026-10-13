@@ -17,7 +17,7 @@ const { nodes, nodeTranslations: tr } = schema;
 export type NodeType = Node["type"];
 
 /** Slug riservati a livello radice (rotte di sistema). */
-const RESERVED_ROOT_SLUGS = ["admin", "api", "mcp", "uploads", "sitemap-xml", "robots-txt", "llms-txt"];
+const RESERVED_ROOT_SLUGS = ["admin", "api", "mcp", "oauth", "uploads", "sitemap-xml", "robots-txt", "llms-txt"];
 
 /** Condizione SQL per traduzioni visibili sul front. */
 export function visibleTranslation(now = new Date()) {

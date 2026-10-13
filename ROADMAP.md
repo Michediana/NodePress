@@ -32,6 +32,7 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 - Trasporto HTTP "streamable" senza sessioni, dentro l'app: funziona anche verso un'installazione remota, senza processi aggiuntivi.
 - I tool usano i servizi del core, non le API REST: stesse validazioni, redirect automatici e ricompilazioni del pannello.
 - Contenuti in Markdown, convertiti in modo reversibile nel formato dell'editor a blocchi.
+- Accesso anche con OAuth 2.1, secondo la specifica di autorizzazione MCP: NodePress è authorization server, consenso nel pannello con l'account dell'utente, scope `admin`/`theme` limitati ai suoi permessi, token legati a `/mcp`. Client con registrazione dinamica o Client ID Metadata Document; PKCE obbligatorio; refresh token ruotati.
 
 ### Multilingua
 - Attivo da subito.
@@ -180,8 +181,9 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 - Endpoint `/mcp` con 50 tool: contenuti, media (anche upload da URL), menu, redirect, lingue, impostazioni, utenti, temi (file, controllo, anteprima resa, pubblicazione, rollback).
 - Guida integrata per l'AI (struttura dei contenuti, Markdown, linguaggio dei temi con il riferimento di variabili, filtri e componenti).
 - Comandi e configurazioni pronti in **API key** per Claude Code, Claude Desktop e gli altri client.
+- OAuth 2.1 per i connettori di claude.ai e Claude Desktop: metadati, registrazione dinamica e Client ID Metadata Document, consenso nel pannello, token con rotazione e revoca, "Applicazioni collegate" nel profilo e nella pagina API key.
 
-**Completata quando:** da Claude si crea una pagina bilingue con immagini, la si aggiunge al menu e si modifica il tema in bozza, verificandolo con l'anteprima prima di pubblicarlo.
+**Completata quando:** collegato il sito come connettore di claude.ai con il solo URL, da Claude si crea una pagina bilingue con immagini, la si aggiunge al menu e si modifica il tema in bozza, verificandolo con l'anteprima prima di pubblicarlo.
 
 ### Fase 3 — Estensioni
 - Revisioni dei contenuti.
@@ -192,6 +194,5 @@ Obiettivo: un CMS in stile WordPress scritto in Node.js/TypeScript.
 
 ## Da valutare
 
-- **OAuth per il server MCP.** Oggi i client si autenticano con una API key nell'header. I connettori remoti di claude.ai e di altri client web richiedono OAuth 2.1 (con registrazione dinamica dei client): servirebbe un authorization server nel pannello, con consenso esplicito e scope admin/theme.
 
 - **`@tailwindcss/typography` nei temi.** Oggi i temi non possono usare plugin Tailwind (`@plugin` eseguirebbe codice sul server), quindi niente classi `prose` per i contenuti. Si potrebbe offrire il plugin dal core: una whitelist di plugin installati con NodePress, caricati dal server e non dal tema (es. `@plugin "@tailwindcss/typography"` ammesso, tutto il resto rifiutato). Il pacchetto va spostato tra le dipendenze di runtime.

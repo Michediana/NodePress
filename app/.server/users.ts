@@ -3,6 +3,7 @@ import { z } from "zod";
 import { hashPassword } from "./auth";
 import { db, schema } from "./db";
 import { UserError } from "./forms";
+import { revokeUserGrants } from "./oauth";
 
 const { users } = schema;
 
@@ -81,7 +82,10 @@ export async function updateUser(id: number, input: UserInput) {
       ...(input.password ? { passwordHash: await hashPassword(input.password) } : {}),
     })
     .where(eq(users.id, id));
-  if (input.password) await db.delete(schema.sessions).where(eq(schema.sessions.userId, id));
+  if (input.password) {
+    await db.delete(schema.sessions).where(eq(schema.sessions.userId, id));
+    await revokeUserGrants(id);
+  }
 }
 
 export async function deleteUser(id: number, currentUserId: number) {

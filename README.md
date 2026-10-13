@@ -29,6 +29,7 @@ Al primo avvio apri `http://localhost:5173/admin`: la procedura guidata su `/adm
 | `app/routes/admin/` | Pannello di amministrazione |
 | `app/routes/api/` | API REST (`/api/v1/...`) |
 | `app/.server/mcp/` | Server MCP per gli assistenti AI (`/mcp`) |
+| `app/.server/oauth.ts` | Authorization server OAuth 2.1 per il server MCP |
 | `app/routes/front/` | Rendering SSR del sito (tutte le rotte non di sistema) |
 | `themes/` | Temi di partenza, installati nel DB al primo avvio |
 | `app/.server/theme/` | Compilatore, build, archivio nel DB e tema attivo |
@@ -203,17 +204,44 @@ curl -X POST http://localhost:5173/api/v1/admin/nodes \
 
 ## Server MCP per l'AI
 
-NodePress espone un server [MCP](https://modelcontextprotocol.io) su `/mcp`: un assistente AI (Claude Code, Claude Desktop, Cursor, VS Code…) può gestire il sito in linguaggio naturale. L'autenticazione usa le stesse API key delle API REST:
+NodePress espone un server [MCP](https://modelcontextprotocol.io) su `/mcp`: un assistente AI (claude.ai, Claude Desktop, Claude Code, Cursor, VS Code…) può gestire il sito in linguaggio naturale. Ci si collega in due modi:
 
-- **admin:** tutto, cioè contenuti, media, menu, redirect, lingue, impostazioni, utenti e temi;
-- **theme:** solo i temi (codice, bozze, anteprime, pubblicazione), senza attivarli né eliminarli;
-- **read:** non ammessa.
+- **OAuth:** basta l'URL `https://<sito>/mcp`. Il client apre il browser sul pannello, l'utente accede e sceglie cosa autorizzare. È il modo per i connettori personalizzati di claude.ai e Claude Desktop, che richiedono un sito raggiungibile da internet in HTTPS.
+- **API key** nell'header `Authorization: Bearer <key>`, come per le API REST. Va bene per Claude Code, Cursor, script e siti in locale.
+
+Gli accessi sono due, sia come scope OAuth sia come scope della key:
+
+- **admin:** tutto, cioè contenuti, media, menu, redirect, lingue, impostazioni, utenti e temi (solo per gli amministratori);
+- **theme:** solo i temi (codice, bozze, anteprime, pubblicazione), senza attivarli né eliminarli (amministratori e sviluppatori tema).
+
+Le key `read` non sono ammesse.
 
 ```bash
+claude mcp add --transport http nodepress https://www.esempio.it/mcp                     # poi /mcp → Authenticate
 claude mcp add --transport http nodepress http://localhost:5173/mcp --header "Authorization: Bearer $NODEPRESS_KEY"
 ```
 
-In **API key** (`/admin/api-keys`) ci sono i comandi e le configurazioni pronti per i vari client, con l'URL del sito e la key appena generata.
+In **API key** (`/admin/api-keys`) ci sono i comandi e le configurazioni pronti per i vari client, con l'URL del sito e la key appena generata, più l'elenco di tutte le applicazioni collegate con OAuth. Ogni utente vede e revoca le proprie nel **Profilo**.
+
+### OAuth
+
+NodePress fa da authorization server OAuth 2.1 secondo la specifica di autorizzazione MCP (`app/.server/oauth.ts`):
+
+| Endpoint | |
+| --- | --- |
+| `/.well-known/oauth-protected-resource/mcp` | Metadati della risorsa (RFC 9728), indicati nel `WWW-Authenticate` dei 401 di `/mcp` |
+| `/.well-known/oauth-authorization-server` | Metadati dell'authorization server (RFC 8414) |
+| `POST /oauth/register` | Registrazione dinamica dei client (RFC 7591) |
+| `/admin/oauth/authorize` | Pagina di consenso nel pannello |
+| `POST /oauth/token` | `authorization_code` e `refresh_token` |
+| `POST /oauth/revoke` | Revoca di un token (RFC 7009) |
+
+- **Client:** pubblici, senza secret. Si registrano con la registrazione dinamica (limitata a 20 per ora per indirizzo; quelle mai usate si cancellano dopo una settimana) oppure si identificano con un Client ID Metadata Document (`client_id` = URL `https` dei metadati, letti e messi in cache per un giorno). `redirect_uri`: `https`, `http` solo verso `localhost`/`127.0.0.1` (qualsiasi porta), schemi delle app native (`cursor://…`).
+- **Autorizzazione:** PKCE `S256` obbligatorio; codici monouso validi un minuto. Il consenso mostra applicazione, dominio di ritorno e account, e lo scope si sceglie tra quelli che l'utente può concedere.
+- **Token:** access token di un'ora, legato alla risorsa `/mcp` (RFC 8707): non vale per le API REST. Refresh token di 30 giorni, ruotato a ogni uso: se uno già usato torna indietro, la concessione viene revocata. Nel database ci sono solo gli hash.
+- **Permessi:** ruolo e capability si ricontrollano a ogni richiesta, quindi chi li perde perde anche l'accesso. Cambiare o reimpostare la password revoca tutte le applicazioni collegate.
+- **Sessione `SameSite=Strict`:** chi arriva al consenso da un altro sito non porterebbe il cookie del pannello; la pagina si ricarica da sola una volta, così la seconda richiesta parte dal pannello e il cookie arriva. La pagina non si può incorniciare.
+- **Origine separata:** l'issuer è `ADMIN_URL`, dove vivono sessione e consenso; metadati e token sono serviti su entrambe le origini.
 
 | Area | Tool |
 | --- | --- |
@@ -226,7 +254,7 @@ In **API key** (`/admin/api-keys`) ci sono i comandi e le configurazioni pronti 
 - **Contenuti in Markdown:** i tool leggono e scrivono il testo in Markdown, convertito nel formato dell'editor a blocchi (`app/.server/markdown.ts`). Le immagini della media library sono `![alt](media:12 "didascalia")`; gallerie, embed e sezioni del tema viaggiano come commenti `<!-- np:gallery {…} -->`, così una lettura seguita da una scrittura non perde blocchi. In alternativa si può passare il JSON di Tiptap.
 - **Temi:** le scritture finiscono nella bozza con un'unica ricompilazione, e gli errori tornano con file, riga e colonna. `theme_preview` rende una pagina con la bozza e restituisce l'HTML e un link di anteprima; il sito cambia solo con `theme_publish`.
 - **Sicurezza:** i tool distruttivi sono marcati come tali, così i client chiedono conferma. `media_upload` scarica solo da indirizzi pubblici, non da reti private o dal server stesso.
-- **Trasporto:** HTTP "streamable" senza sessioni (`app/.server/mcp/`), servito su entrambe le origini se il pannello è separato. I client che accettano solo server locali (Claude Desktop) si collegano con `npx mcp-remote`.
+- **Trasporto:** HTTP "streamable" senza sessioni (`app/.server/mcp/`), servito su entrambe le origini se il pannello è separato. Per un sito non raggiungibile da internet, Claude Desktop si collega con una API key tramite `npx mcp-remote`.
 
 ## Content Security Policy
 

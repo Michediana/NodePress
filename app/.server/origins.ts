@@ -32,8 +32,11 @@ export async function frontBaseUrl() {
 }
 
 const ADMIN_PATH = /^\/admin(\/|\.data$|$)/;
-/** Percorsi serviti su entrambe le origini: API e MCP (con key, senza cookie), media e asset del tema. */
-const SHARED_PATH = /^\/((api|uploads|_np)\/|mcp$)/;
+/**
+ * Percorsi serviti su entrambe le origini: API, MCP e OAuth (con token, senza cookie), media e asset
+ * del tema. La pagina di consenso OAuth sta sotto /admin, quindi sull'origine del pannello.
+ */
+const SHARED_PATH = /^\/((api|uploads|_np|oauth|\.well-known\/oauth-[a-z-]+)(\/|$)|mcp$)/;
 
 /**
  * Smista le richieste tra le due origini. Restituisce una risposta da dare subito (redirect, robots)
