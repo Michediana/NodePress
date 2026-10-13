@@ -23,7 +23,7 @@ export function MiniCode({
 
   useEffect(() => {
     let disposed = false;
-    loadMonaco().then((monaco) => {
+    void loadMonaco().then((monaco) => {
       if (disposed || !container.current) return;
       const instance = monaco.editor.create(container.current, {
         value,

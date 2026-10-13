@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, desc, eq, gt, gte, isNotNull, lt, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, gte, lt, sql, type SQL } from "drizzle-orm";
 import type { MySqlColumn } from "drizzle-orm/mysql-core";
 import { isbot } from "isbot";
 import { z } from "zod";

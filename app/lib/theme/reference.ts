@@ -1,4 +1,4 @@
-import { CORE_COMPONENTS, FILTER_NAMES } from "./ast";
+import type { CORE_COMPONENTS, FILTER_NAMES } from "./ast";
 
 // Riferimento del linguaggio dei temi: variabili, filtri e componenti del core, con descrizioni.
 // Alimenta autocompletamento e hover dell'editor; tenuto allineato a filters.ts e renderer.tsx.

@@ -58,7 +58,8 @@ export function CodeEditor({ ref, path, load, error, onChange, onSave }: Props) 
   // Crea l'editor una volta sola, nel browser.
   useEffect(() => {
     let disposed = false;
-    loadMonaco().then((api) => {
+    const models = entries.current;
+    void loadMonaco().then((api) => {
       if (disposed || !container.current) return;
       const instance = api.editor.create(container.current, {
         model: null,
@@ -82,8 +83,8 @@ export function CodeEditor({ ref, path, load, error, onChange, onSave }: Props) 
     return () => {
       disposed = true;
       editor.current?.dispose();
-      for (const entry of entries.current.values()) entry.model.dispose();
-      entries.current.clear();
+      for (const entry of models.values()) entry.model.dispose();
+      models.clear();
     };
   }, []);
 
@@ -107,7 +108,7 @@ export function CodeEditor({ ref, path, load, error, onChange, onSave }: Props) 
     }
     let cancelled = false;
     setLoadingPath(path);
-    callbacks.current
+    void callbacks.current
       .load(path)
       .then((content) => {
         if (cancelled || entries.current.has(path)) return;

@@ -106,7 +106,7 @@ function curl(baseUrl: string, endpoint: Endpoint, apiKey: string, body: string)
 }
 
 function copy(text: string) {
-  navigator.clipboard.writeText(text).then(() => toast.success(t("common.copied")));
+  void navigator.clipboard.writeText(text).then(() => toast.success(t("common.copied")));
 }
 
 type Result = { status: number; ms: number; body: string };

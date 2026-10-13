@@ -47,7 +47,7 @@ export function MediaPicker({
     if (!open) return;
     const params = new URLSearchParams({ page: String(page), q: query, type });
     if (folderId !== null) params.set("folder", String(folderId));
-    list.load(`/admin/media/picker?${params}`);
+    void list.load(`/admin/media/picker?${params}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, page, query, type, folderId, upload.data]);
 
@@ -102,7 +102,7 @@ export function MediaPicker({
               const form = new FormData();
               for (const file of files) form.append("files", file);
               if (folderId !== null) form.set("folder", String(folderId));
-              upload.submit(form, { method: "post", action: "/admin/media", encType: "multipart/form-data" });
+              void upload.submit(form, { method: "post", action: "/admin/media", encType: "multipart/form-data" });
               e.target.value = "";
             }}
           />

@@ -299,7 +299,7 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
         else form.set(key, value === null ? "" : String(value));
       }
       closeOnSuccess.current = dialog !== null;
-      fetcher.submit(form, { method: "post", encType: "multipart/form-data" });
+      void fetcher.submit(form, { method: "post", encType: "multipart/form-data" });
     },
     [fetcher, dialog],
   );
@@ -588,7 +588,7 @@ export default function MediaLibrary({ loaderData }: Route.ComponentProps) {
     onDoubleClick: () => open(entry),
     onKeyDown: (e: React.KeyboardEvent) => {
       if (e.target !== e.currentTarget) return;
-      if (e.key === "Enter") open(entry);
+      if (e.key === "Enter") void open(entry);
       if (e.key === " ") {
         e.preventDefault();
         toggle(entry.key);

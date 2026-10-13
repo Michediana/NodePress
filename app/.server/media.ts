@@ -185,7 +185,7 @@ export function descendantFolderIds(folders: { id: number; parentId: number | nu
 }
 
 function cleanFolderName(name: string) {
-  const clean = name.replace(/[\/]/g, "-").trim().slice(0, 255);
+  const clean = name.replace(/\//g, "-").trim().slice(0, 255);
   if (!clean) throw new UserError("Il nome della cartella non può essere vuoto.");
   return clean;
 }

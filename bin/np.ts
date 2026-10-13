@@ -408,7 +408,7 @@ async function watchDir(ctx: Context, force: boolean) {
 
   const flush = async () => {
     timer = null;
-    if (running) return void (timer = setTimeout(flush, WATCH_DELAY));
+    if (running) return void (timer = setTimeout(() => void flush(), WATCH_DELAY));
     const files = [...pending];
     pending.clear();
     running = push(ctx, { force, only: files, quiet: true })
@@ -424,7 +424,7 @@ async function watchDir(ctx: Context, force: boolean) {
     if (!isThemeFile(rel)) return;
     pending.add(rel);
     if (timer) clearTimeout(timer);
-    timer = setTimeout(flush, WATCH_DELAY);
+    timer = setTimeout(() => void flush(), WATCH_DELAY);
   });
   await new Promise(() => {});
 }

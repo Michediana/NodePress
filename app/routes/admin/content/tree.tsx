@@ -122,7 +122,7 @@ function TreeRow({ node, depth, langs, canManage, isFirst, isLast }: { node: Row
                     variant="destructive"
                     onClick={async () => {
                       if (await confirmDialog({ description: t("content.confirmDelete"), confirmLabel: t("common.delete"), destructive: true }))
-                        act("delete");
+                        void act("delete");
                     }}
                   >
                     <TrashIcon />

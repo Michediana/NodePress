@@ -34,7 +34,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
       // JSON non valido: resta modificabile solo nell'editor del codice.
     }
   }
-  let tokenValues: Record<string, string> = {};
+  let tokenValues: Record<string, string>;
   try {
     tokenValues = JSON.parse(sources.get("config/tokens.json")?.toString("utf8") ?? "{}");
   } catch {

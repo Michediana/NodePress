@@ -47,7 +47,11 @@ function observeVitals() {
   vitalsObserved = true;
   const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   if (navigation && navigation.responseStart > 0) vitals.ttfb = Math.round(navigation.responseStart);
-  const observe = (type: string, callback: (entry: PerformanceEntry & Record<string, any>) => void, options = {}) => {
+  const observe = (
+    type: string,
+    callback: (entry: PerformanceEntry & { hadRecentInput?: boolean; value?: number; interactionId?: number }) => void,
+    options = {},
+  ) => {
     try {
       new PerformanceObserver((list) => list.getEntries().forEach(callback)).observe({
         type,
@@ -65,7 +69,7 @@ function observeVitals() {
   let cls = 0;
   observe("layout-shift", (entry) => {
     if (entry.hadRecentInput) return;
-    cls += entry.value;
+    cls += entry.value ?? 0;
     vitals.cls = Math.round(cls * 1000);
   });
   observe(

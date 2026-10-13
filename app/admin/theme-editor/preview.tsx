@@ -88,7 +88,9 @@ export function Preview({
     }
   };
 
-  useImperativeHandle(ref, () => ({ reload }), [theme, remote]);
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
+  useImperativeHandle(ref, () => ({ reload: () => reloadRef.current() }), []);
 
   /** Lo stesso percorso sull'origine pubblica, con i parametri dell'anteprima (tema e token). */
   const publicSrc = (target: string) => {

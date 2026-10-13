@@ -258,8 +258,11 @@ function evaluate(expr: Expr, scope: Scope, ctx: Ctx): unknown {
       return left ?? evaluate(expr.right, scope, ctx);
     }
     case "bin": {
+      // Confronti tra valori arbitrari del tema, con la semantica di JavaScript.
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       const l = evaluate(expr.left, scope, ctx) as any;
       const r = evaluate(expr.right, scope, ctx) as any;
+      /* eslint-enable @typescript-eslint/no-explicit-any */
       switch (expr.op) {
         case "===":
           return l === r;

@@ -145,7 +145,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
   );
   useEffect(() => {
     if (blocker.state !== "blocked") return;
-    confirmDialog({ description: t("appearance.editor.unsavedLeave") }).then((ok) => (ok ? blocker.proceed() : blocker.reset()));
+    void confirmDialog({ description: t("appearance.editor.unsavedLeave") }).then((ok) => (ok ? blocker.proceed() : blocker.reset()));
   }, [blocker]);
 
   const post = async (body: unknown): Promise<Outcome> => {
@@ -174,7 +174,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
       if (!quiet) toast.success(t("appearance.editor.savedBuilt"));
       preview.current?.reload();
     }
-    revalidator.revalidate();
+    void revalidator.revalidate();
   };
 
   const open = (path: string) => {
@@ -216,9 +216,12 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
     (path: string, content: string, isDirty: boolean) => {
       setDirty((d) => (d[path] === isDirty ? d : { ...d, [path]: isDirty }));
       window.clearTimeout(lintTimers.current[path]);
-      lintTimers.current[path] = window.setTimeout(async () => {
-        const result = await post({ intent: "lint", path, content }).catch(() => null);
-        if (result) setLint((l) => ({ ...l, [path]: result.error ?? null }));
+      lintTimers.current[path] = window.setTimeout(() => {
+        void post({ intent: "lint", path, content })
+          .catch(() => null)
+          .then((result) => {
+            if (result) setLint((l) => ({ ...l, [path]: result.error ?? null }));
+          });
       }, 400);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,7 +280,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
     run(async () => {
       await post({ intent: "publish" });
       toast.success(t("appearance.publishedOk"));
-      revalidator.revalidate();
+      void revalidator.revalidate();
     });
 
   const buildError = theme.buildError;
@@ -397,7 +400,7 @@ export default function ThemeEditor({ loaderData }: Route.ComponentProps) {
             onChange={(e) => {
               const file = e.target.files?.[0];
               e.target.value = "";
-              if (file) onUpload(file);
+              if (file) void onUpload(file);
             }}
           />
         </ResizablePanel>

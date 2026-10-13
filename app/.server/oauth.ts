@@ -376,7 +376,7 @@ type TokenParams = Record<string, string>;
 /** Parametri del token endpoint: form urlencoded (standard) o JSON; client_id anche da Basic. */
 export async function readTokenParams(request: Request): Promise<TokenParams> {
   const type = request.headers.get("Content-Type") ?? "";
-  let params: TokenParams = {};
+  let params: TokenParams;
   if (type.includes("application/json")) {
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") throw new OAuthError("invalid_request", "Body non valido.");

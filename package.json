@@ -11,7 +11,9 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "np": "node bin/np.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -53,6 +55,7 @@
     "zod": "^4.6.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@react-router/dev": "^8.4.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.2.2",
@@ -62,9 +65,14 @@
     "@types/react-dom": "^19.2.7",
     "dotenv": "^18.0.7",
     "drizzle-kit": "^0.31.11",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
     "prettier": "3.9.10",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2",
     "vite": "^8.0.3"
   }
 }

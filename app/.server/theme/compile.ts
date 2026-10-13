@@ -93,6 +93,7 @@ const FILTERS = new Set<string>(FILTER_NAMES);
 const CORE = new Set<string>(CORE_COMPONENTS);
 
 // Tipi ESTree minimi usati dal compilatore (acorn non esporta tipi per i nodi JSX).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type N = AcornNode & Record<string, any>;
 
 const camel = (name: string) => name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());

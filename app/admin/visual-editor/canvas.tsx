@@ -185,7 +185,7 @@ export function Canvas({ ref, theme, path, viewport, tokens, selectedId, onSelec
   useEffect(() => {
     if (path === firstPath.current) return;
     firstPath.current = path;
-    load(path, false);
+    void load(path, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path]);
 

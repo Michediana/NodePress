@@ -212,7 +212,7 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
   );
   useEffect(() => {
     if (blocker.state !== "blocked") return;
-    confirmDialog({ description: t("visual.leaveWhileSaving") }).then((ok) => (ok ? blocker.proceed() : blocker.reset()));
+    void confirmDialog({ description: t("visual.leaveWhileSaving") }).then((ok) => (ok ? blocker.proceed() : blocker.reset()));
   }, [blocker]);
 
   // --- Annulla / ripeti da tastiera (non dentro i campi di testo o Monaco). ---
@@ -638,6 +638,6 @@ export function VisualEditor({ data }: { data: VisualEditorData }) {
     if (!res.ok || !outcome.ok) return toast.error(outcome.message ?? t("errors.generic"));
     toast.success(buildId ? t("visual.restored") : t("appearance.publishedOk"));
     if (!buildId) setUnpublished(false);
-    revalidator.revalidate();
+    void revalidator.revalidate();
   }
 }
